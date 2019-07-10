@@ -1,5 +1,5 @@
 from app import db
-from app.reporting import constants as REPORTER
+from app.reporting.constants import REPORTER_STATUS
 
 
 class Reporter(db.Model):
@@ -10,7 +10,7 @@ class Reporter(db.Model):
     title = db.Column(db.String(20), unique=True)  # pylint: disable=no-member
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
-    status = db.Column(db.SmallInteger, default=REPORTER.NEW)  # noqa pylint: disable=no-member
+    status = db.Column(db.SmallInteger, default=REPORTER_STATUS.NEW)  # noqa pylint: disable=no-member
 
     def __init__(self, name, title=None, email=None, password=None):
         self.name = name
@@ -20,7 +20,7 @@ class Reporter(db.Model):
 
     @property
     def get_status(self):
-        return REPORTER.STATUS[self.status]
+        return REPORTER_STATUS[self.status]
 
     def __repr__(self):
         return '<Reporter %r>' % (self.name)
@@ -39,7 +39,7 @@ class ImagingSession(db.Model):
     clinical_notes = db.Column(db.Text)  # pylint: disable=no-member
     technique = db.Column(db.Text)  # pylint: disable=no-member
     findings = db.Column(db.Text)  # pylint: disable=no-member
-    conclusion = db.Column(db.Text)  # pylint: disable=no-member
+    conclusion = db.Column(db.Integer)  # pylint: disable=no-member
     reported_by = db.Column(db.String(200))  # pylint: disable=no-member
 
     def __init__(self, subject_id, project_id, priority=0):
