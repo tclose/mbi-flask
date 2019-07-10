@@ -1,10 +1,10 @@
 from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for)
-from werkzeug import check_password_hash, generate_password_hash
+from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
 from app import db
 from app.reporting.forms import RegisterForm, LoginForm
-from app.reporting.models import ImagingSession, Reporter
+from app.reporting.models import Session, Reporter
 from app.reporting.decorators import requires_login
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
@@ -62,5 +62,5 @@ def register():
         # flash will display a message to the user
         flash('Thanks for registering')
         # redirect user to the 'home' method of the user module.
-        return redirect(url_for('users.home'))
-    return render_template("users/register.html", form=form)
+        return redirect(url_for('reporting.home'))
+    return render_template("reporting/register.html", form=form)

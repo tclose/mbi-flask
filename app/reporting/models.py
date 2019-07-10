@@ -1,16 +1,16 @@
 from app import db
-from app.reporting.constants import REPORTER_STATUS
+from app.reporting.constants import REPORTER_STATUS, NEW
 
 
 class Reporter(db.Model):
 
-    __tablename__ = 'users_user'
+    __tablename__ = 'reporting_reporter'
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
     title = db.Column(db.String(20), unique=True)  # pylint: disable=no-member
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
-    status = db.Column(db.SmallInteger, default=REPORTER_STATUS.NEW)  # noqa pylint: disable=no-member
+    status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member
 
     def __init__(self, name, title=None, email=None, password=None):
         self.name = name
@@ -26,9 +26,9 @@ class Reporter(db.Model):
         return '<Reporter %r>' % (self.name)
 
 
-class ImagingSession(db.Model):
+class Session(db.Model):
 
-    __tablename__ = 'imaging_sesions'
+    __tablename__ = 'reporting_session'
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     subject_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
     xnat_id = db.Column(db.String(6), unique=True)  # noqa pylint: disable=no-member
@@ -48,4 +48,4 @@ class ImagingSession(db.Model):
         self.priority = priority
 
     def __repr__(self):
-        return '<ImagingSession %r>' % (self.name)
+        return '<Session %r>' % (self.name)

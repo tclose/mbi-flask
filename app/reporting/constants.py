@@ -13,14 +13,14 @@ NONURGENT = 1
 CRITICAL = 2
 
 CONCLUSION = {
-    NONE: ("No PATH",
-           ("No gross PATH that would require clinical follow up "
+    NONE: ("No pathology",
+           ("No gross pathology that would require clinical follow up "
             "has been identified")),
-    NONURGENT: ("Non-urgent PATH",
-                ("PATH that requires non-urgent clinical follow"
+    NONURGENT: ("Non-urgent pathology",
+                ("pathology that requires non-urgent clinical follow"
                  " up has been identified")),
-    CRITICAL: ("Critial PATH",
-               ("PATH that requires urgent clinical follow up "
+    CRITICAL: ("Critial pathology",
+               ("pathology that requires urgent clinical follow up "
                 "has been identified. The individual should be "
                 "referred for follow up immediately."))
 }
