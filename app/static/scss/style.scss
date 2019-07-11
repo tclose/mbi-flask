@@ -1,0 +1,37 @@
+@import url("http://fonts.googleapis.com/css?family=Marcellus");
+
+$icons-layout: diagonal;
+
+@import "icons/*.png";
+@include all-icons-sprites;
+
+@import "compass";
+@import "bootstrap/bootstrap";
+@import "bootstrap/responsive";
+
+body {
+    font-family: proxima-nova, "Helvetica Neue", Helvetica, Arial;
+}
+
+h1 {
+    font-family: "Marcellus";
+    color: darken($blueDark, 15%);
+    @include text-shadow(rgba(255,255,255,1) 0 1px 0);
+    small {
+    	font-family: "Helvetica";
+    }
+}
+
+div.hero-unit {
+    background: darken($purple, 15%) image-url('bg-hero.jpg') repeat;
+	color: $white;
+
+    img.hero-icon {
+    	border-right: 1px dashed #dedede; 
+    	margin-top: 5px; 
+    	margin-bottom: 5px; 
+    	margin-right: 10px; 
+    	padding-right:10px !important;
+    }
+
+}
