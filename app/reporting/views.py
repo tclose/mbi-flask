@@ -36,7 +36,7 @@ def login():
             # it's a safe place to store the user id
             session['reporter_id'] = reporter.id
             flash('Welcome %s' % reporter.name)
-            return redirect(url_for('reporting.home'))
+            return redirect(url_for('reporting.sessions'))
         flash('Wrong email or password', 'error-message')
     return render_template("reporting/login.html", form=form)
 
@@ -62,5 +62,13 @@ def register():
         # flash will display a message to the user
         flash('Thanks for registering')
         # redirect user to the 'home' method of the user module.
-        return redirect(url_for('reporting.home'))
+        return redirect(url_for('reporting.sessions'))
     return render_template("reporting/register.html", form=form)
+
+
+@mod.route('/sessions/', methods=['GET'])
+def sessions():
+    """
+    Display all sessions that still need to be reported
+    """
+    return render_template("reporting/sessions.html")

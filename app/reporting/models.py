@@ -7,7 +7,7 @@ class Reporter(db.Model):
     __tablename__ = 'reporting_reporter'
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
-    title = db.Column(db.String(20), unique=True)  # pylint: disable=no-member
+    suffixes = db.Column(db.String(30), unique=True)  # noqa pylint: disable=no-member
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
     status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member

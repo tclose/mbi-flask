@@ -9,8 +9,8 @@ class LoginForm(Form):
 
 
 class RegisterForm(Form):
-    name = TextField('Full Name', [Required()])
-    title = TextField('Title', [Required()])
+    name = TextField('Full Name and Title (e.g. Dr John Smith)', [Required()])
+    suffixes = TextField('Suffixes (e.g. MBBS FRANZCR)', [Required()])
     email = TextField('Email address', [Required(), Email()])
     password = PasswordField('Password', [Required()])
     confirm = PasswordField('Repeat Password', [

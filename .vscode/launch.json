@@ -22,6 +22,13 @@
             "jinja": true
         },
         {
+            "name": "Python: Init DB",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/init_db.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

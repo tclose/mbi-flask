@@ -1,3 +1,3 @@
-from mbi_flask import db
+from app import db
 
 db.create_all()
