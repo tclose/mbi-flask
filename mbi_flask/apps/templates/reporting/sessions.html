@@ -1,4 +1,24 @@
 {% extends "reporting/base.html" %}
+{% block sub_heading %}Unreported sessions{% endblock %}
 {% block content %}
-Hi {{ reporter.name }}!
+<table>
+    <thead>
+        <tr class="sessions-table-head">
+            <th>Scan Date</th>
+            <th>XNAT ID</th>
+            <th>Priority</th>
+        </tr>
+    </thead>
+    <tbody>
+{% for session in sessions %}
+    <tr>
+        <td>{{ session.scan_date.strftime('%d/%m/%Y') }}</td>
+        <td>
+            <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">session.xnat_id</a>
+        </td>
+        <td>{{ session.priority_str }}</td>
+    </div>
+{% endfor %}
+</tbody>
+</table>
 {% endblock %}

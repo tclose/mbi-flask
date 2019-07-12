@@ -51,7 +51,7 @@ def login():
             session['reporter_id'] = reporter.id
             flash('Welcome {}'.format(reporter.name), 'success')
             return redirect(url_for('reporting.sessions'))
-        flash('Wrong email or password', 'error-message')
+        flash('Wrong email or password', 'error')
     return render_template("reporting/login.html", form=form)
 
 
@@ -60,8 +60,10 @@ def logout():
     """
     Logout page
     """
+    reporter = g.reporter
     g.reporter = None
     del session['reporter_id']
+    flash('Logged out {}'.format(reporter.name), 'info')
     return redirect(url_for('reporting.login'))
 
 
@@ -98,4 +100,29 @@ def sessions():
     """
     Display all sessions that still need to be reported
     """
-    return render_template("reporting/sessions.html", reporter=g.reporter)
+    unreported_sessions = (
+        Session.query
+        .filter(Session.reporter_id != None)
+        .order_by(Session.priority, Session.scan_date))  # noqa
+    return render_template("reporting/sessions.html",
+                           sessions=unreported_sessions)
+
+
+@mod.route('/report', methods=['GET'])
+@requires_login
+def report():
+    """
+    Enter report
+    """
+    session = Session.query.filter_by(
+        session_id=request.args.get('session')).first()
+    return render_template("reporting/report.html", session=session)
+
+
+@mod.route('/import')
+@requires_login(admin=True)
+def import_():
+    """
+    Imports session information from FileMaker database export into in SQL lite
+    DB
+    """

@@ -13,6 +13,7 @@ class Reporter(db.Model):
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
     status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member
+    sessions = db.relationship('Session', back_populates='reporter')  # noqa pylint: disable=no-member
 
     def __init__(self, name, suffixes, email, password, status=NEW):
         self.name = name
@@ -36,10 +37,14 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     subject_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
     dob = db.Column(db.Date())  # pylint: disable=no-member
+    sessions = db.relationship('Session', back_populates='subject')  # noqa pylint: disable=no-member
 
     def __init__(self, subject_id, dob):
         self.subject_id = subject_id
         self.dob = dob
+
+    def __repr__(self):
+        return '<Subject {}>'.format(self.subject_id)
 
 
 class Session(db.Model):
@@ -53,9 +58,11 @@ class Session(db.Model):
     scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
     report_date = db.Column(db.Date())  # pylint: disable=no-member
-    reported_by = db.Column(db.Integer, db.ForeignKey('reporting_reporter.id'))  # noqa pylint: disable=no-member
+    reporter_id = db.Column(db.Integer, db.ForeignKey('reporting_reporter.id'))  # noqa pylint: disable=no-member
     findings = db.Column(db.Text)  # pylint: disable=no-member
     conclusion = db.Column(db.Integer)  # pylint: disable=no-member
+    subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
+    reporter = db.relationship('Reporter', back_populates='sessions')  # noqa pylint: disable=no-member
 
     def __init__(self, study_id, subject_id, xnat_id, scan_date, priority=LOW,
                  report_date=None, reported_by=None, findings=None,
