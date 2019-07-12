@@ -1,12 +1,12 @@
 import os
-pkg_root = os.path.abspath(os.path.dirname(__file__))
+repo_root = os.path.abspath(os.path.dirname(__file__))
 
 DEBUG = False
 
 ADMINS = frozenset(['tom.close@monash.edu'])
 SECRET_KEY = 'SecretKeyForSessionSigning'
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(pkg_root, 'app.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(repo_root, 'app.db')
 DATABASE_CONNECT_OPTIONS = {}
 
 THREADS_PER_PAGE = 8

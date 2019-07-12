@@ -5,3 +5,4 @@
 **/__pycache__
 /app.db
 /app/static/css
+mbi_flask/apps/static/scss/.sass-cache

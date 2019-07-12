@@ -14,8 +14,7 @@ class Reporter(db.Model):
     password = db.Column(db.String(120))  # pylint: disable=no-member
     status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member
 
-    def __init__(self, name, suffixes=None, email=None, password=None,
-                 status=NEW):
+    def __init__(self, name, suffixes, email, password, status=NEW):
         self.name = name
         self.suffixes = suffixes
         self.email = email

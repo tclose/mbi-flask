@@ -10,7 +10,7 @@
             "request": "launch",
             "module": "flask",
             "env": {
-                "FLASK_APP": "app",
+                "FLASK_APP": "mbi_flask",
                 "FLASK_ENV": "development",
                 "FLASK_DEBUG": "0"
             },
@@ -22,10 +22,10 @@
             "jinja": true
         },
         {
-            "name": "Python: Init DB",
+            "name": "Python: Reset DB",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/init_db.py",
+            "program": "${workspaceFolder}/reset_db.py",
             "console": "integratedTerminal"
         },
         {

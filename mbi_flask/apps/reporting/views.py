@@ -1,8 +1,9 @@
+import os.path as op
 from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for)
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
-from mbi_flask import db
+from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm
 from .models import Session, Reporter
 from .decorators import requires_login
@@ -15,9 +16,20 @@ def before_request():
     """
     pull user's profile from the database before every request are treated
     """
-    g.user = None
-    if 'user_id' in session:
-        g.user = Reporter.query.get(session['user_id'])
+    g.reporter = None
+    if 'reporter_id' in session:
+        g.reporter = Reporter.query.get(session['reporter_id'])
+
+
+@mod.route('/', methods=['GET'])
+def index():
+    """
+    Display all sessions that still need to be reported
+    """
+    if g.reporter is None:
+        return redirect(url_for('reporting.login'))
+    else:
+        return redirect(url_for('reporting.sessions'))
 
 
 @mod.route('/login/', methods=['GET', 'POST'])
@@ -25,6 +37,8 @@ def login():
     """
     Login form
     """
+    if g.reporter is not None:
+        return redirect(url_for('reporting.sessions'))
     form = LoginForm(request.form)
     # make sure data are valid, but doesn't validate password is right
     if form.validate_on_submit():
@@ -35,10 +49,20 @@ def login():
             # the session can't be modified as it's signed,
             # it's a safe place to store the user id
             session['reporter_id'] = reporter.id
-            flash('Welcome %s' % reporter.name)
+            flash('Welcome {}'.format(reporter.name), 'success')
             return redirect(url_for('reporting.sessions'))
         flash('Wrong email or password', 'error-message')
     return render_template("reporting/login.html", form=form)
+
+
+@mod.route('/logout/', methods=['GET', 'POST'])
+def logout():
+    """
+    Logout page
+    """
+    g.reporter = None
+    del session['reporter_id']
+    return redirect(url_for('reporting.login'))
 
 
 @mod.route('/register/', methods=['GET', 'POST'])
@@ -50,7 +74,9 @@ def register():
     if form.validate_on_submit():
         # create an user instance not yet stored in the database
         reporter = Reporter(
-            name=form.name.data, email=form.email.data,
+            name=form.name.data,
+            suffixes=form.suffixes.data,
+            email=form.email.data,
             password=generate_password_hash(form.password.data))
         # Insert the record in our database and commit it
         db.session.add(reporter)  # pylint: disable=no-member
@@ -60,15 +86,16 @@ def register():
         session['reporter_id'] = reporter.id
 
         # flash will display a message to the user
-        flash('Thanks for registering')
+        flash('Thanks for registering', 'success')
         # redirect user to the 'home' method of the user module.
         return redirect(url_for('reporting.sessions'))
     return render_template("reporting/register.html", form=form)
 
 
-@mod.route('/sessions/', methods=['GET'])
+@mod.route('/sessions', methods=['GET'])
+@requires_login
 def sessions():
     """
     Display all sessions that still need to be reported
     """
-    return render_template("reporting/sessions.html")
+    return render_template("reporting/sessions.html", reporter=g.reporter)
