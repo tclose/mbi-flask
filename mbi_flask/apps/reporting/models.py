@@ -1,5 +1,5 @@
-from apps import db
-from apps.reporting.constants import (
+from mbi_flask import db
+from .constants import (
     SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW)
 
 
