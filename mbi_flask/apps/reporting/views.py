@@ -117,34 +117,30 @@ def report():
 
     form = RegisterForm(request.form)
 
-    if 'session' in request.args:
-        img_session_id = request.args['session']
-    else:
-        img_session_id = form.session_id.data
+    img_session_id = request.args.get('session', form.session_id.data)
 
     # Retrieve session from database
     img_session = ImagingSession.query.filter_by(
         session_id=img_session_id).first()
 
-    # Retrieve scan types from XNAT
-    avail_scan_types = ['mprage', 'flair', 't2-flair']
-
-    form.scan_types.choices = list(enumerate(scan_types))
-
     if form.validate_on_submit():
-        # create an user instance not yet stored in the database
 
-        scan_types = [avail_scan_types[i] for i in form.scan_types.data]
+        # Retrieve scan types from XNAT
+        scan_type_names = ['mprage', 'flair']
+        scan_types = []
 
-        for i, type_name in enumerate(scan_type_names):
+        for scan_type_name in scan_type_names:
             try:
-                scan_type = ScanType.query.filter_by(type=type_name).first()
+                scan_type = ScanType.query.filter_by(
+                    type=scan_type_name).first()
             except Exception as e:
                 print(e)
-                scan_type = ScanType(type_name)
-            avail_scan_types[i] = scan_type
+                scan_type = ScanType(scan_type_name)
+                db.session.add(scan_type)  # pylint: disable=no-member
+            scan_types.append(scan_type)
 
-        reporter = Report(
+        # create an report instance not yet stored in the database
+        report = Report(
             session_id=img_session_id,
             reporter_id=form.reporter_id.data,
             findings=form.findings.data,
@@ -152,11 +148,11 @@ def report():
             scan_types=scan_types)
 
         # Insert the record in our database and commit it
-        db.session.add(reporter)  # pylint: disable=no-member
+        db.session.add(report)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
 
         # flash will display a message to the user
-        flash('{} report submitted'.format(), 'success')
+        flash('Report submitted for {}'.format(img_session_id), 'success')
         # redirect user to the 'home' method of the user module.
         return redirect(url_for('reporting.sessions'))
     return render_template("reporting/report.html", session=img_session,

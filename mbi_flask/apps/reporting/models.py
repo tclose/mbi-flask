@@ -127,6 +127,6 @@ class ScanType(db.Model):
     type = db.Column(db.String(150), unique=True)  # pylint: disable=no-member
     alias = db.Column(db.Integer)  # pylint: disable=no-member
 
-    def __init__(type, alias=None):
+    def __init__(self, type, alias=None):
         self.type = type
         self.alias = alias
