@@ -2,10 +2,10 @@ from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for)
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
-from app import db
-from app.reporting.forms import RegisterForm, LoginForm
-from app.reporting.models import Session, Reporter
-from app.reporting.decorators import requires_login
+from apps import db
+from apps.reporting.forms import RegisterForm, LoginForm
+from apps.reporting.models import Session, Reporter
+from apps.reporting.decorators import requires_login
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 

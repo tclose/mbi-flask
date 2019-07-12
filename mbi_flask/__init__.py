@@ -11,5 +11,5 @@ db = SQLAlchemy(app)
 def not_found(error):
     return render_template('404.html'), 404
 
-from app.reporting.views import mod as reportingModule  # noqa
+from .apps.reporting.views import mod as reportingModule  # noqa
 app.register_blueprint(reportingModule)
