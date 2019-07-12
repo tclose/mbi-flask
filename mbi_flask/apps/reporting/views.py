@@ -5,7 +5,7 @@ from flask import (
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
 from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm
-from .models import Session, Reporter
+from .models import ImagingSession, Reporter, Report, ScanType
 from .decorators import requires_login
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
@@ -101,26 +101,69 @@ def sessions():
     Display all sessions that still need to be reported
     """
     unreported_sessions = (
-        Session.query
-        .filter(Session.reporter_id != None)
-        .order_by(Session.priority, Session.scan_date))  # noqa
+        ImagingSession.query
+        .filter(ImagingSession.reporter_id != None)
+        .order_by(ImagingSession.priority, ImagingSession.scan_date))  # noqa
     return render_template("reporting/sessions.html",
                            sessions=unreported_sessions)
 
 
-@mod.route('/report', methods=['GET'])
+@mod.route('/report', methods=['GET', 'POST'])
 @requires_login
 def report():
     """
     Enter report
     """
-    session = Session.query.filter_by(
-        session_id=request.args.get('session')).first()
-    return render_template("reporting/report.html", session=session)
+
+    form = RegisterForm(request.form)
+
+    if 'session' in request.args:
+        img_session_id = request.args['session']
+    else:
+        img_session_id = form.session_id.data
+
+    # Retrieve session from database
+    img_session = ImagingSession.query.filter_by(
+        session_id=img_session_id).first()
+
+    # Retrieve scan types from XNAT
+    avail_scan_types = ['mprage', 'flair', 't2-flair']
+
+    form.scan_types.choices = list(enumerate(scan_types))
+
+    if form.validate_on_submit():
+        # create an user instance not yet stored in the database
+
+        scan_types = [avail_scan_types[i] for i in form.scan_types.data]
+
+        for i, type_name in enumerate(scan_type_names):
+            try:
+                scan_type = ScanType.query.filter_by(type=type_name).first()
+            except Exception as e:
+                print(e)
+                scan_type = ScanType(type_name)
+            avail_scan_types[i] = scan_type
+
+        reporter = Report(
+            session_id=img_session_id,
+            reporter_id=form.reporter_id.data,
+            findings=form.findings.data,
+            conclusion=form.conclusion.data,
+            scan_types=scan_types)
+
+        # Insert the record in our database and commit it
+        db.session.add(reporter)  # pylint: disable=no-member
+        db.session.commit()  # pylint: disable=no-member
+
+        # flash will display a message to the user
+        flash('{} report submitted'.format(), 'success')
+        # redirect user to the 'home' method of the user module.
+        return redirect(url_for('reporting.sessions'))
+    return render_template("reporting/report.html", session=img_session,
+                           form=form)
 
 
 @mod.route('/import')
-@requires_login(admin=True)
 def import_():
     """
     Imports session information from FileMaker database export into in SQL lite
