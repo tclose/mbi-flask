@@ -116,6 +116,12 @@ def report():
 
     form = ReportForm(request.form)
 
+    # Retrieve scan types from XNAT
+    avail_scan_types = ['t1_mprage_sag_p3_iso_1_ADNI',
+                        't2_space_sag_p2_iso']
+
+    form.scan_types.choices = list(enumerate(avail_scan_types))
+
     if 'session' in request.args:
         img_session_id = request.args['session']
     else:

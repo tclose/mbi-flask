@@ -33,5 +33,5 @@ HIGH = 2
 SESSION_PRIORITY = {
     LOW: "Low",
     MEDIUM: "Medium",
-    HIGH: "high"
+    HIGH: "High"
 }
