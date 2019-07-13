@@ -1,7 +1,10 @@
 from datetime import datetime
 from mbi_flask import db
+from sqlalchemy.ext.declarative import declarative_base
 from .constants import (
     SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW)
+
+Base = declarative_base()
 
 
 class Subject(db.Model):
@@ -31,7 +34,7 @@ class ImagingSession(db.Model):
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
-    xnat_id = db.Column(db.String(6), unique=True)  # noqa pylint: disable=no-member
+    xnat_id = db.Column(db.String(6))  # noqa pylint: disable=no-member
     date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
 
@@ -54,10 +57,25 @@ class ImagingSession(db.Model):
         return SESSION_PRIORITY[self.priority]
 
 
+class ScanType(db.Model):
+
+    __tablename__ = 'reporting_scantype'
+
+    # Fields
+    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    scan_type = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
+    alias = db.Column(db.Integer)  # pylint: disable=no-member
+
+    def __init__(self, scan_type, alias=None):
+        self.scan_type = scan_type
+        self.alias = alias
+
+
 scan_type_assoc_table = db.Table(  # pylint: disable=no-member
-    'reporting_scan_type_assoc', db.Base.metadata,  # noqa pylint: disable=no-member
-    db.Column('left_id', db.Integer, db.ForeignKey('left.id')),  # noqa pylint: disable=no-member
-    db.Column('right_id', db.Integer, db.ForeignKey('right.id'))  # noqa pylint: disable=no-member
+    'reporting_scantype_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('report_id', db.Integer, db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
+    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
 )
 
 
@@ -116,17 +134,3 @@ class Reporter(db.Model):
 
     def __repr__(self):
         return '<Reporter {}>'.format(self.name)
-
-
-class ScanType(db.Model):
-
-    __tablename__ = 'reporting_scantype'
-
-    # Fields
-    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    type = db.Column(db.String(150), unique=True)  # pylint: disable=no-member
-    alias = db.Column(db.Integer)  # pylint: disable=no-member
-
-    def __init__(self, type, alias=None):
-        self.type = type
-        self.alias = alias
