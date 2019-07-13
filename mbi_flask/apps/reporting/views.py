@@ -102,7 +102,6 @@ def sessions():
     """
     unreported_sessions = (
         ImagingSession.query
-        .filter(ImagingSession.reporter_id != None)
         .order_by(ImagingSession.priority, ImagingSession.scan_date))  # noqa
     return render_template("reporting/sessions.html",
                            sessions=unreported_sessions)

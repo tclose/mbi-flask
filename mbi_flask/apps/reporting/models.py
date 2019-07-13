@@ -35,18 +35,18 @@ class ImagingSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
     xnat_id = db.Column(db.String(6))  # noqa pylint: disable=no-member
-    date = db.Column(db.Date())  # pylint: disable=no-member
+    scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
 
     # Relationships
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
 
-    def __init__(self, id, subject_id, xnat_id, date, priority=LOW):
+    def __init__(self, id, subject_id, xnat_id, scan_date, priority=LOW):
         self.id = id
         self.subject_id = subject_id
         self.xnat_id = xnat_id
-        self.date = date
+        self.scan_date = scan_date
         self.priority = priority
 
     def __repr__(self):
