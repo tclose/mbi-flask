@@ -4,7 +4,7 @@ from flask import (
     redirect, url_for)
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
 from mbi_flask import db, templates_dir, static_dir
-from .forms import RegisterForm, LoginForm
+from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, Reporter, Report, ScanType
 from .decorators import requires_login
 
@@ -114,13 +114,16 @@ def report():
     Enter report
     """
 
-    form = RegisterForm(request.form)
+    form = ReportForm(request.form)
 
-    img_session_id = request.args.get('session', form.session_id.data)
+    if 'session' in request.args:
+        img_session_id = request.args['session']
+    else:
+        img_session_id = form.session_id.data
 
     # Retrieve session from database
     img_session = ImagingSession.query.filter_by(
-        session_id=img_session_id).first()
+        id=img_session_id).first()
 
     if form.validate_on_submit():
 

@@ -17,10 +17,10 @@ CONCLUSION = {
            ("No gross pathology that would require clinical follow up "
             "has been identified")),
     NONURGENT: ("Non-urgent pathology",
-                ("pathology that requires non-urgent clinical follow"
+                ("Pathology that requires non-urgent clinical follow"
                  " up has been identified")),
     CRITICAL: ("Critial pathology",
-               ("pathology that requires urgent clinical follow up "
+               ("Pathology that requires urgent clinical follow up "
                 "has been identified. The individual should be "
                 "referred for follow up immediately."))
 }

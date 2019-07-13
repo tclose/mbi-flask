@@ -1,20 +1,22 @@
-from flask_wtf import Form, RecaptchaField
+from flask_wtf import Form
 from wtforms import (
-    TextField, PasswordField, BooleanField, SelectMultipleField, widgets)
+    StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
+    SelectField)
 from wtforms.validators import Required, EqualTo, Email
+from .constants import CONCLUSION
 
 
 class LoginForm(Form):
-    email = TextField('Email address', [Required(), Email()])
+    email = StringField('Email address', [Required(), Email()])
     password = PasswordField('Password', [Required()])
 
 
 class RegisterForm(Form):
-    name = TextField(
+    name = StringField(
         'Full name and title to appear on reports (e.g. Dr Jane E. Doe)',
         [Required()])
-    suffixes = TextField('Suffixes (e.g. MBBS FRANZCR)', [Required()])
-    email = TextField('Email address', [Required(), Email()])
+    suffixes = StringField('Suffixes (e.g. MBBS FRANZCR)', [Required()])
+    email = StringField('Email address', [Required(), Email()])
     password = PasswordField('Password', [Required()])
     confirm = PasswordField('Repeat password', [
         Required(),
@@ -24,5 +26,6 @@ class RegisterForm(Form):
 
 class ReportForm(Form):
 
-    findings = TextField('Findings', [])
-    conclusion = TextField('Conclusion', [])
+    findings = StringField('Findings', [])
+    conclusion = SelectField(
+        'Conclusion', choices=[(i, s) for i, (s, _) in CONCLUSION.items()])

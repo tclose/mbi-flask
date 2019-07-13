@@ -4,10 +4,10 @@
 <table>
     <thead>
         <tr>
-            <th>Session ID</th>
-            <th>Scan Date</th>
-            <th>XNAT ID</th>
-            <th>Priority</th>
+            <th>Session ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Scan Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>XNAT ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+            <th>Priority&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
         </tr>
     </thead>
     <tbody>
@@ -21,6 +21,7 @@
         </td>
         <td>
             <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.xnat_id }}</a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         </td>
         <td>
             <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.priority_str }}</a>

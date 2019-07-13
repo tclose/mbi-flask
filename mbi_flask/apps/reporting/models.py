@@ -13,18 +13,18 @@ class Subject(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    subject_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+    mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
     dob = db.Column(db.Date())  # pylint: disable=no-member
 
     # Relationships
     sessions = db.relationship('ImagingSession', back_populates='subject')  # noqa pylint: disable=no-member
 
-    def __init__(self, subject_id, dob):
-        self.subject_id = subject_id
+    def __init__(self, mbi_id, dob):
+        self.mbi_id = mbi_id
         self.dob = dob
 
     def __repr__(self):
-        return '<Subject {}>'.format(self.subject_id)
+        return '<Subject {}>'.format(self.mbi_id)
 
 
 class ImagingSession(db.Model):
