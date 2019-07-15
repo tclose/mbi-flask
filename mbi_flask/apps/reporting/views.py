@@ -148,7 +148,7 @@ def report():
             findings=form.findings.data,
             conclusion=form.conclusion.data,
             used_scan_types=ScanType.query.filter(
-                ScanType.id.in_(form.scan_types.data)))
+                ScanType.id.in_(form.scan_types.data)).all())
 
         # Insert the record in our database and commit it
         db.session.add(report)  # pylint: disable=no-member
@@ -158,6 +158,8 @@ def report():
         flash('Report submitted for {}'.format(session_id), 'success')
         # redirect user to the 'home' method of the user module.
         return redirect(url_for('reporting.sessions'))
+    elif form.is_submitted:
+        flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
                            form=form)
 

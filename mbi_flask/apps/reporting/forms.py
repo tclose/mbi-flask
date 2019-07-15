@@ -1,7 +1,8 @@
 from flask_wtf import Form
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
-    SelectField, HiddenField)
+    SelectField, HiddenField, TextAreaField)
+from wtforms.validators import DataRequired
 from wtforms.validators import Required, EqualTo, Email
 from .constants import CONCLUSION
 
@@ -37,8 +38,10 @@ class RegisterForm(Form):
 
 class ReportForm(Form):
 
-    findings = StringField('Findings', [])
+    findings = TextAreaField('Findings', [])
     conclusion = SelectField(
-        'Conclusion', choices=[(i, s) for i, (s, _) in CONCLUSION.items()])
-    scan_types = MultiCheckboxField('Scans used', coerce=int)
+        'Conclusion', choices=[(i, s) for i, (s, _) in CONCLUSION.items()],
+        coerce=int)
+    scan_types = MultiCheckboxField('Scans used', [DataRequired()],
+                                    coerce=int)
     session_id = HiddenField('session_id')
