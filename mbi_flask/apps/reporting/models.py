@@ -27,6 +27,22 @@ class Subject(db.Model):
         return '<Subject {}>'.format(self.mbi_id)
 
 
+scantype_session_assoc_table = db.Table(  # pylint: disable=no-member
+    'scantype_session_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('session_id', db.Integer, db.ForeignKey('reporting_session.id')),  # noqa pylint: disable=no-member
+    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
+)
+
+
+scantype_report_assoc_table = db.Table(  # pylint: disable=no-member
+    'scantype_report_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('report_id', db.Integer, db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
+    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
+)
+
+
 class ImagingSession(db.Model):
 
     __tablename__ = 'reporting_session'
@@ -41,6 +57,7 @@ class ImagingSession(db.Model):
     # Relationships
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
+    avail_scan_types = db.relationship('ScanType', secondary=scantype_session_assoc_table)  # noqa pylint: disable=no-member
 
     def __init__(self, id, subject_id, xnat_id, scan_date, priority=LOW):
         self.id = id
@@ -56,27 +73,6 @@ class ImagingSession(db.Model):
     def priority_str(self):
         return SESSION_PRIORITY[self.priority]
 
-
-class ScanType(db.Model):
-
-    __tablename__ = 'reporting_scantype'
-
-    # Fields
-    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    scan_type = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
-    alias = db.Column(db.Integer)  # pylint: disable=no-member
-
-    def __init__(self, scan_type, alias=None):
-        self.scan_type = scan_type
-        self.alias = alias
-
-
-scan_type_assoc_table = db.Table(  # pylint: disable=no-member
-    'reporting_scantype_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
-    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    db.Column('report_id', db.Integer, db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
-    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
-)
 
 
 class Report(db.Model):
@@ -94,7 +90,7 @@ class Report(db.Model):
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
     reporter = db.relationship('Reporter', back_populates='reports')  # noqa pylint: disable=no-member
-    scan_types = db.relationship('ScanType', secondary=scan_type_assoc_table)  # noqa pylint: disable=no-member
+    scan_types = db.relationship('ScanType', secondary=scantype_report_assoc_table)  # noqa pylint: disable=no-member
 
     def __init__(self, session_id, reporter_id, findings, conclusion,
                  scan_types, date=datetime.today()):
@@ -104,6 +100,20 @@ class Report(db.Model):
         self.conclusion = conclusion
         self.scan_types = scan_types
         self.date = date
+
+
+class ScanType(db.Model):
+
+    __tablename__ = 'reporting_scantype'
+
+    # Fields
+    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    scan_type = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
+    alias = db.Column(db.Integer)  # pylint: disable=no-member
+
+    def __init__(self, scan_type, alias=None):
+        self.scan_type = scan_type
+        self.alias = alias
 
 
 class Reporter(db.Model):
