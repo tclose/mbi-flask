@@ -89,7 +89,7 @@ class Report(db.Model):
 
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
-    reporter = db.relationship('Reporter', back_populates='reports')  # noqa pylint: disable=no-member
+    reporter = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
     scan_types = db.relationship('ScanType', secondary=scantype_report_assoc_table)  # noqa pylint: disable=no-member
 
     def __init__(self, session_id, reporter_id, findings, conclusion,
@@ -116,7 +116,7 @@ class ScanType(db.Model):
         self.alias = alias
 
 
-class Reporter(db.Model):
+class User(db.Model):
 
     __tablename__ = 'reporting_reporter'
 
@@ -143,4 +143,4 @@ class Reporter(db.Model):
         return REPORTER_STATUS[self.status]
 
     def __repr__(self):
-        return '<Reporter {}>'.format(self.name)
+        return '<User {}>'.format(self.name)

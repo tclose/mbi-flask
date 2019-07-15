@@ -5,7 +5,7 @@ from flask import (
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
 from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm, ReportForm
-from .models import ImagingSession, Reporter, Report, ScanType
+from .models import ImagingSession, User, Report, ScanType
 from .decorators import requires_login
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
@@ -18,7 +18,7 @@ def before_request():
     """
     g.reporter = None
     if 'reporter_id' in session:
-        g.reporter = Reporter.query.get(session['reporter_id'])
+        g.reporter = User.query.get(session['reporter_id'])
 
 
 @mod.route('/', methods=['GET'])
@@ -42,7 +42,7 @@ def login():
     form = LoginForm(request.form)
     # make sure data are valid, but doesn't validate password is right
     if form.validate_on_submit():
-        reporter = Reporter.query.filter_by(email=form.email.data).first()
+        reporter = User.query.filter_by(email=form.email.data).first()
         # we use werzeug to validate user's password
         if reporter and check_password_hash(reporter.password,
                                             form.password.data):
@@ -75,7 +75,7 @@ def register():
     form = RegisterForm(request.form)
     if form.validate_on_submit():
         # create an user instance not yet stored in the database
-        reporter = Reporter(
+        reporter = User(
             name=form.name.data,
             suffixes=form.suffixes.data,
             email=form.email.data,
