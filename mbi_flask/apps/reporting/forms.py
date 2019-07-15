@@ -1,7 +1,7 @@
 from flask_wtf import Form
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
-    SelectField)
+    SelectField, HiddenField)
 from wtforms.validators import Required, EqualTo, Email
 from .constants import CONCLUSION
 
@@ -41,3 +41,4 @@ class ReportForm(Form):
     conclusion = SelectField(
         'Conclusion', choices=[(i, s) for i, (s, _) in CONCLUSION.items()])
     scan_types = MultiCheckboxField('Scans used', coerce=int)
+    session_id = HiddenField('session_id')

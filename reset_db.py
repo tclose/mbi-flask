@@ -4,8 +4,8 @@ import random
 from mbi_flask import db
 from datetime import datetime
 from mbi_flask.apps.reporting.models import (
-    Subject, ImagingSession, ScanType, Report, scantype_session_assoc_table,
-    scantype_report_assoc_table, User, UserRole)
+    Subject, ImagingSession, ScanType, Report, session_scantype_assoc_table,
+    report_scantype_assoc_table, user_role_assoc_table, User, Role)
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
 db_path = op.join(op.dirname(__file__), 'app.db')
@@ -14,8 +14,8 @@ if op.exists(db_path):
 
 db.create_all()
 
-admin_role = UserRole('admin')
-reporter_role = UserRole('reporter')
+admin_role = Role('admin')
+reporter_role = Role('reporter')
 
 db.session.add(admin_role)  # noqa pylint: disable=no-member
 db.session.add(reporter_role)  # noqa pylint: disable=no-member
@@ -29,7 +29,7 @@ scan_types = [
 
 db.session.add(User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',  # noqa pylint: disable=no-member
                     generate_password_hash('Jygbiq-juqrad-8seqxu'),
-                    roles=[admin_role, reporter_role]))
+                    roles=[reporter_role], active=True))
 
 for i, (subj_id, dob, study_id, xnat_id, scan_date, priority) in enumerate([
         ('MSH103138', '12/03/1952', 1231, 'MRH100_124_MR02', '10/04/2017', 0),
@@ -42,6 +42,7 @@ for i, (subj_id, dob, study_id, xnat_id, scan_date, priority) in enumerate([
     db.session.add(Subject(subj_id, datetime.strptime(dob, '%d/%m/%Y')))  # noqa pylint: disable=no-member
     db.session.add(ImagingSession(  # noqa pylint: disable=no-member
         study_id, i, xnat_id, datetime.strptime(scan_date, '%d/%m/%Y'),
-        random.choices(scan_types), priority))
+        random.choices(scan_types, k=random.randint(1, len(scan_types) - 1)),
+        priority))
 
 db.session.commit()  # noqa pylint: disable=no-member

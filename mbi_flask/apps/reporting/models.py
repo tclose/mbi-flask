@@ -23,9 +23,9 @@ class User(db.Model):
     active = db.Column(db.Boolean())  # noqa pylint: disable=no-member
 
     # Relationships
-    reports = db.relationship('Report', back_populates='user')  # noqa pylint: disable=no-member
+    reports = db.relationship('Report', back_populates='reporter')  # noqa pylint: disable=no-member
     roles = db.relationship('Role',  # noqa pylint: disable=no-member
-                            secondary='reporting_user_roles')
+                            secondary='reporting_user_role_assoc')
 
     def __init__(self, name, suffixes, email, password, roles=(),
                  active=False):
@@ -42,6 +42,9 @@ class User(db.Model):
 
     def __repr__(self):
         return '<User {}>'.format(self.name)
+
+    def has_role(self, role):
+        return role in [r.name for r in self.roles]
 
 
 class Role(db.Model):
@@ -101,8 +104,9 @@ class ImagingSession(db.Model):
     # Relationships
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
-    avail_scan_types = db.relationship('ScanType',  # noqa pylint: disable=no-member
-                                       secondary='reporting_session_scantypes')
+    avail_scan_types = db.relationship(  # noqa pylint: disable=no-member
+        'ScanType',  # noqa pylint: disable=no-member
+        secondary='reporting_session_scantype_assoc')
 
     def __init__(self, id, subject_id, xnat_id, scan_date, avail_scan_types,
                  priority=LOW):
@@ -132,21 +136,22 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     date = db.Column(db.Date())  # pylint: disable=no-member
     session_id = db.Column(db.Integer, db.ForeignKey('reporting_session.id'))  # noqa pylint: disable=no-member
-    user_id = db.Column(db.Integer, db.ForeignKey('reporting_user.id'))  # noqa pylint: disable=no-member
+    reporter_id = db.Column(db.Integer, db.ForeignKey('reporting_user.id'))  # noqa pylint: disable=no-member
     findings = db.Column(db.Text)  # pylint: disable=no-member
     conclusion = db.Column(db.Integer)  # pylint: disable=no-member
     exported = db.Column(db.Boolean)  # pylint: disable=no-member
 
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
-    user = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
-    used_scan_types = db.relationship('ScanType',  # noqa pylint: disable=no-member
-                                      secondary='reporting_report_scantypes')
+    reporter = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
+    used_scan_types = db.relationship(  # noqa pylint: disable=no-member
+        'ScanType',  # noqa pylint: disable=no-member
+        secondary='reporting_report_scantype_assoc')
 
-    def __init__(self, session_id, user_id, findings, conclusion,
+    def __init__(self, session_id, reporter_id, findings, conclusion,
                  used_scan_types, date=datetime.today()):
         self.session_id = session_id
-        self.user_id = user_id
+        self.reporter_id = reporter_id
         self.findings = findings
         self.conclusion = conclusion
         self.used_scan_types = used_scan_types
@@ -162,44 +167,36 @@ class ScanType(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    scan_type = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
+    name = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
     alias = db.Column(db.Integer)  # pylint: disable=no-member
 
-    def __init__(self, scan_type, alias=None):
-        self.scan_type = scan_type
+    def __init__(self, name, alias=None):
+        self.name = name
         self.alias = alias
 
-
-# Many-to-many association types
-
-class SessionScanTypes(db.Model):
-
-    __tablename__ = 'reporting_session_scantypes'
-
-    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    session_id = db.Column('report_id', db.Integer,  # noqa pylint: disable=no-member
-                           db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
-    scantype_id = db.Column('scantype_id',  # noqa pylint: disable=no-member
-                            db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
+    def __repr__(self):
+        return "<ScanType {}>".format(self.name)
 
 
-class ReportScanTypes(db.Model):
+# Many-to-many association tables
 
-    __tablename__ = 'reporting_report_scantypes'
-
-    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    report_id = db.Column('report_id', db.Integer,  # noqa pylint: disable=no-member
-                          db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
-    scantype_id = db.Column('scantype_id', db.Integer,  # noqa pylint: disable=no-member
-                            db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
+user_role_assoc_table = db.Table(  # pylint: disable=no-member
+    'reporting_user_role_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('user_id', db.Integer, db.ForeignKey('reporting_user.id')),  # noqa pylint: disable=no-member
+    db.Column('role_id', db.Integer, db.ForeignKey('reporting_role.id')))  # noqa pylint: disable=no-member
 
 
-class UserRoles(db.Model):
+session_scantype_assoc_table = db.Table(  # pylint: disable=no-member
+    'reporting_session_scantype_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('session_id', db.Integer, db.ForeignKey('reporting_session.id')),  # noqa pylint: disable=no-member
+    db.Column('scantype_id', db.Integer,  # noqa pylint: disable=no-member
+              db.ForeignKey('reporting_scantype.id')))  # noqa pylint: disable=no-member
 
-    __tablename__ = 'reporting_user_roles'
 
-    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    user_id = db.Column('user_id', db.Integer,  # noqa pylint: disable=no-member
-                        db.ForeignKey('reporting_user.id')),  # noqa pylint: disable=no-member
-    role_id = db.Column('role_id', db.Integer,  # noqa pylint: disable=no-member
-                        db.ForeignKey('reporting_role.id'))  # noqa pylint: disable=no-member
+report_scantype_assoc_table = db.Table(  # pylint: disable=no-member
+    'reporting_report_scantype_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    db.Column('report_id', db.Integer, db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
+    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id')))  # noqa pylint: disable=no-member

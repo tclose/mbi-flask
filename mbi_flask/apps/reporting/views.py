@@ -6,7 +6,7 @@ from werkzeug import check_password_hash, generate_password_hash  # noqa pylint:
 from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, User, Report, ScanType
-from .decorators import requires_role
+from .decorators import requires_login
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 
@@ -22,14 +22,16 @@ def before_request():
 
 
 @mod.route('/', methods=['GET'])
+@requires_login()
 def index():
-    """
-    Display all sessions that still need to be reported
-    """
-    if g.user is None:
-        return redirect(url_for('reporting.login'))
-    else:
+    if g.user.has_role('admin'):
+        return redirect(url_for('reporting.admin'))
+    elif g.user.has_role('reporter'):
         return redirect(url_for('reporting.sessions'))
+    else:
+        raise Exception(
+            "Unrecognised role for user {} ({})".format(
+                g.user, (str(r) for r in g.user.roles)))
 
 
 @mod.route('/login/', methods=['GET', 'POST'])
@@ -37,8 +39,8 @@ def login():
     """
     Login form
     """
-    if g.user is not None:
-        return redirect(url_for('reporting.sessions'))
+    if g.user is not None and g.user.active:
+        return redirect(url_for('reporting.index'))
     form = LoginForm(request.form)
     # make sure data are valid, but doesn't validate password is right
     if form.validate_on_submit():
@@ -49,7 +51,7 @@ def login():
             # it's a safe place to store the user id
             session['user_id'] = user.id
             flash('Welcome {}'.format(user.name), 'success')
-            return redirect(url_for('reporting.sessions'))
+            return redirect(url_for('reporting.index'))
         flash('Wrong email or password', 'error')
     return render_template("reporting/login.html", form=form)
 
@@ -94,7 +96,7 @@ def register():
 
 
 @mod.route('/sessions', methods=['GET'])
-@requires_role('reporter')
+@requires_login('reporter')
 def sessions():
     """
     Display all sessions that still need to be reported
@@ -107,7 +109,7 @@ def sessions():
 
 
 @mod.route('/report', methods=['GET', 'POST'])
-@requires_role('reporter')
+@requires_login('reporter')
 def report():
     """
     Enter report
@@ -115,40 +117,45 @@ def report():
 
     form = ReportForm(request.form)
 
-    # Retrieve scan types from XNAT
-    avail_scan_types = ['t1_mprage_sag_p3_iso_1_ADNI',
-                        't2_space_sag_p2_iso']
-
-    form.scan_types.choices = list(enumerate(avail_scan_types))
-
-    if 'session' in request.args:
-        img_session_id = request.args['session']
-    else:
-        img_session_id = form.session_id.data
+    try:
+        session_id = request.args['session_id']
+    except KeyError:
+        if form.is_submitted():
+            session_id = form.session_id.data
+        else:
+            raise Exception("session_id was not provided in request url")
 
     # Retrieve session from database
     img_session = ImagingSession.query.filter_by(
-        id=img_session_id).first()
+        id=session_id).first()
+
+    if img_session is None:
+        raise Exception(
+            "Session corresponding to ID {} was not found".format(
+                session_id))
+
+    # Dynamically set form fields
+    form.session_id.data = session_id
+    form.scan_types.choices = [
+        (t.id, t.name) for t in img_session.avail_scan_types]
 
     if form.validate_on_submit():
 
-        # Retrieve scan types from XNAT
-        used_scan_types = ScanType.query.filter()
-
         # create an report instance not yet stored in the database
         report = Report(
-            session_id=img_session_id,
-            user_id=form.user_id.data,
+            session_id=session_id,
+            reporter_id=g.user.id,
             findings=form.findings.data,
             conclusion=form.conclusion.data,
-            used_scan_types=used_scan_types)
+            used_scan_types=ScanType.query.filter(
+                ScanType.id.in_(form.scan_types.data)))
 
         # Insert the record in our database and commit it
         db.session.add(report)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
 
         # flash will display a message to the user
-        flash('Report submitted for {}'.format(img_session_id), 'success')
+        flash('Report submitted for {}'.format(session_id), 'success')
         # redirect user to the 'home' method of the user module.
         return redirect(url_for('reporting.sessions'))
     return render_template("reporting/report.html", session=img_session,
@@ -156,7 +163,7 @@ def report():
 
 
 @mod.route('/import')
-@requires_role('admin')
+@requires_login('admin')
 def import_():
     """
     Imports session information from FileMaker database export into in SQL lite

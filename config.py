@@ -3,6 +3,8 @@ repo_root = os.path.abspath(os.path.dirname(__file__))
 
 DEBUG = False
 
+ADMIN_EMAIL = 'mbi-informatics@monash.edu'
+
 ADMINS = frozenset(['tom.close@monash.edu'])
 SECRET_KEY = 'SecretKeyForSessionSigning'
 

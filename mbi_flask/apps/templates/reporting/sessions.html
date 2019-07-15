@@ -14,17 +14,17 @@
 {% for session in sessions %}
     <tr>
         <td>
-            <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.id }}</a>
+            <a href="{{ url_for('reporting.report') }}?session_id={{ session.id }}">{{ session.id }}</a>
         </td>
         <td>
-            <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.scan_date.strftime('%d/%m/%Y') }}</a>
+            <a href="{{ url_for('reporting.report') }}?session_id={{ session.id }}">{{ session.scan_date.strftime('%d/%m/%Y') }}</a>
         </td>
         <td>
-            <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.xnat_id }}</a>
+            <a href="{{ url_for('reporting.report') }}?session_id={{ session.id }}">{{ session.xnat_id }}</a>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         </td>
         <td>
-            <a href="{{ url_for('reporting.report') }}?session={{ session.id }}">{{ session.priority_str }}</a>
+            <a href="{{ url_for('reporting.report') }}?session_id={{ session.id }}">{{ session.priority_str }}</a>
         </td>
     </div>
 {% endfor %}
