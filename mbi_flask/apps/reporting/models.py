@@ -7,7 +7,64 @@ from .constants import (
 Base = declarative_base()
 
 
+class User(db.Model):
+    """
+    User of the application
+    """
+
+    __tablename__ = 'reporting_user'
+
+    # Fields
+    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
+    suffixes = db.Column(db.String(30), unique=True)  # noqa pylint: disable=no-member
+    email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
+    password = db.Column(db.String(120))  # pylint: disable=no-member
+    active = db.Column(db.Boolean())  # noqa pylint: disable=no-member
+
+    # Relationships
+    reports = db.relationship('Report', back_populates='user')  # noqa pylint: disable=no-member
+    roles = db.relationship('Role',  # noqa pylint: disable=no-member
+                            secondary='reporting_user_roles')
+
+    def __init__(self, name, suffixes, email, password, roles=(),
+                 active=False):
+        self.name = name
+        self.suffixes = suffixes
+        self.email = email
+        self.password = password
+        self.roles = roles
+        self.active = active
+
+    @property
+    def status_str(self):
+        return REPORTER_STATUS[self.status]
+
+    def __repr__(self):
+        return '<User {}>'.format(self.name)
+
+
+class Role(db.Model):
+    """
+    Valid user roles (e.g. 'admin' and 'reporter')
+    """
+
+    __tablename__ = 'reporting_role'
+
+    # Fields
+    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
+
+    def __init__(self, name):
+        self.name = name
+
+
 class Subject(db.Model):
+    """
+    Basic information about the subject of the imaging session. It is
+    separated from the imaging session so that we can check for multiple
+    in a year (or other arbitrary period) and only provide the latest one.
+    """
 
     __tablename__ = 'reporting_subject'
 
@@ -27,23 +84,10 @@ class Subject(db.Model):
         return '<Subject {}>'.format(self.mbi_id)
 
 
-scantype_session_assoc_table = db.Table(  # pylint: disable=no-member
-    'scantype_session_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
-    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    db.Column('session_id', db.Integer, db.ForeignKey('reporting_session.id')),  # noqa pylint: disable=no-member
-    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
-)
-
-
-scantype_report_assoc_table = db.Table(  # pylint: disable=no-member
-    'scantype_report_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
-    db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
-    db.Column('report_id', db.Integer, db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
-    db.Column('scantype_id', db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
-)
-
-
 class ImagingSession(db.Model):
+    """
+    Details of the imaging session to report on
+    """
 
     __tablename__ = 'reporting_session'
 
@@ -57,13 +101,16 @@ class ImagingSession(db.Model):
     # Relationships
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
-    avail_scan_types = db.relationship('ScanType', secondary=scantype_session_assoc_table)  # noqa pylint: disable=no-member
+    avail_scan_types = db.relationship('ScanType',  # noqa pylint: disable=no-member
+                                       secondary='reporting_session_scantypes')
 
-    def __init__(self, id, subject_id, xnat_id, scan_date, priority=LOW):
+    def __init__(self, id, subject_id, xnat_id, scan_date, avail_scan_types,
+                 priority=LOW):
         self.id = id
         self.subject_id = subject_id
         self.xnat_id = xnat_id
         self.scan_date = scan_date
+        self.avail_scan_types = avail_scan_types
         self.priority = priority
 
     def __repr__(self):
@@ -75,6 +122,9 @@ class ImagingSession(db.Model):
 
 
 class Report(db.Model):
+    """
+    A report entered by a radiologist
+    """
 
     __tablename__ = 'reporting_report'
 
@@ -85,23 +135,28 @@ class Report(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('reporting_user.id'))  # noqa pylint: disable=no-member
     findings = db.Column(db.Text)  # pylint: disable=no-member
     conclusion = db.Column(db.Integer)  # pylint: disable=no-member
+    exported = db.Column(db.Boolean)  # pylint: disable=no-member
 
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
     user = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
-    scan_types = db.relationship('ScanType', secondary=scantype_report_assoc_table)  # noqa pylint: disable=no-member
+    used_scan_types = db.relationship('ScanType',  # noqa pylint: disable=no-member
+                                      secondary='reporting_report_scantypes')
 
     def __init__(self, session_id, user_id, findings, conclusion,
-                 scan_types, date=datetime.today()):
+                 used_scan_types, date=datetime.today()):
         self.session_id = session_id
         self.user_id = user_id
         self.findings = findings
         self.conclusion = conclusion
-        self.scan_types = scan_types
+        self.used_scan_types = used_scan_types
         self.date = date
 
 
 class ScanType(db.Model):
+    """
+    The type of (clinically relevant) scans in the session
+    """
 
     __tablename__ = 'reporting_scantype'
 
@@ -115,31 +170,36 @@ class ScanType(db.Model):
         self.alias = alias
 
 
-class User(db.Model):
+# Many-to-many association types
 
-    __tablename__ = 'reporting_user'
+class SessionScanTypes(db.Model):
 
-    # Fields
-    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
-    suffixes = db.Column(db.String(30), unique=True)  # noqa pylint: disable=no-member
-    email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
-    password = db.Column(db.String(120))  # pylint: disable=no-member
-    status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member
+    __tablename__ = 'reporting_session_scantypes'
 
-    # Relationships
-    reports = db.relationship('Report', back_populates='user')  # noqa pylint: disable=no-member
+    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    session_id = db.Column('report_id', db.Integer,  # noqa pylint: disable=no-member
+                           db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
+    scantype_id = db.Column('scantype_id',  # noqa pylint: disable=no-member
+                            db.Integer, db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
 
-    def __init__(self, name, suffixes, email, password, status=NEW):
-        self.name = name
-        self.suffixes = suffixes
-        self.email = email
-        self.password = password
-        self.status = status
 
-    @property
-    def status_str(self):
-        return REPORTER_STATUS[self.status]
+class ReportScanTypes(db.Model):
 
-    def __repr__(self):
-        return '<User {}>'.format(self.name)
+    __tablename__ = 'reporting_report_scantypes'
+
+    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    report_id = db.Column('report_id', db.Integer,  # noqa pylint: disable=no-member
+                          db.ForeignKey('reporting_report.id')),  # noqa pylint: disable=no-member
+    scantype_id = db.Column('scantype_id', db.Integer,  # noqa pylint: disable=no-member
+                            db.ForeignKey('reporting_scantype.id'))  # noqa pylint: disable=no-member
+
+
+class UserRoles(db.Model):
+
+    __tablename__ = 'reporting_user_roles'
+
+    id = db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+    user_id = db.Column('user_id', db.Integer,  # noqa pylint: disable=no-member
+                        db.ForeignKey('reporting_user.id')),  # noqa pylint: disable=no-member
+    role_id = db.Column('role_id', db.Integer,  # noqa pylint: disable=no-member
+                        db.ForeignKey('reporting_role.id'))  # noqa pylint: disable=no-member

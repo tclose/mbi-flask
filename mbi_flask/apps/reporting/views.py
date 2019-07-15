@@ -6,7 +6,7 @@ from werkzeug import check_password_hash, generate_password_hash  # noqa pylint:
 from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, User, Report, ScanType
-from .decorators import requires_login
+from .decorators import requires_role
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 
@@ -94,7 +94,7 @@ def register():
 
 
 @mod.route('/sessions', methods=['GET'])
-@requires_login
+@requires_role('reporter')
 def sessions():
     """
     Display all sessions that still need to be reported
@@ -107,7 +107,7 @@ def sessions():
 
 
 @mod.route('/report', methods=['GET', 'POST'])
-@requires_login
+@requires_role('reporter')
 def report():
     """
     Enter report
@@ -133,18 +133,7 @@ def report():
     if form.validate_on_submit():
 
         # Retrieve scan types from XNAT
-        scan_type_names = ['mprage', 'flair']
-        scan_types = []
-
-        for scan_type_name in scan_type_names:
-            try:
-                scan_type = ScanType.query.filter_by(
-                    type=scan_type_name).first()
-            except Exception as e:
-                print(e)
-                scan_type = ScanType(scan_type_name)
-                db.session.add(scan_type)  # pylint: disable=no-member
-            scan_types.append(scan_type)
+        used_scan_types = ScanType.query.filter()
 
         # create an report instance not yet stored in the database
         report = Report(
@@ -152,7 +141,7 @@ def report():
             user_id=form.user_id.data,
             findings=form.findings.data,
             conclusion=form.conclusion.data,
-            scan_types=scan_types)
+            used_scan_types=used_scan_types)
 
         # Insert the record in our database and commit it
         db.session.add(report)  # pylint: disable=no-member
@@ -167,6 +156,7 @@ def report():
 
 
 @mod.route('/import')
+@requires_role('admin')
 def import_():
     """
     Imports session information from FileMaker database export into in SQL lite
