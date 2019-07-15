@@ -74,7 +74,6 @@ class ImagingSession(db.Model):
         return SESSION_PRIORITY[self.priority]
 
 
-
 class Report(db.Model):
 
     __tablename__ = 'reporting_report'
@@ -83,19 +82,19 @@ class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     date = db.Column(db.Date())  # pylint: disable=no-member
     session_id = db.Column(db.Integer, db.ForeignKey('reporting_session.id'))  # noqa pylint: disable=no-member
-    reporter_id = db.Column(db.Integer, db.ForeignKey('reporting_reporter.id'))  # noqa pylint: disable=no-member
+    user_id = db.Column(db.Integer, db.ForeignKey('reporting_user.id'))  # noqa pylint: disable=no-member
     findings = db.Column(db.Text)  # pylint: disable=no-member
     conclusion = db.Column(db.Integer)  # pylint: disable=no-member
 
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
-    reporter = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
+    user = db.relationship('User', back_populates='reports')  # noqa pylint: disable=no-member
     scan_types = db.relationship('ScanType', secondary=scantype_report_assoc_table)  # noqa pylint: disable=no-member
 
-    def __init__(self, session_id, reporter_id, findings, conclusion,
+    def __init__(self, session_id, user_id, findings, conclusion,
                  scan_types, date=datetime.today()):
         self.session_id = session_id
-        self.reporter_id = reporter_id
+        self.user_id = user_id
         self.findings = findings
         self.conclusion = conclusion
         self.scan_types = scan_types
@@ -118,7 +117,7 @@ class ScanType(db.Model):
 
 class User(db.Model):
 
-    __tablename__ = 'reporting_reporter'
+    __tablename__ = 'reporting_user'
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
@@ -129,7 +128,7 @@ class User(db.Model):
     status = db.Column(db.SmallInteger, default=NEW)  # noqa pylint: disable=no-member
 
     # Relationships
-    reports = db.relationship('Report', back_populates='reporter')  # noqa pylint: disable=no-member
+    reports = db.relationship('Report', back_populates='user')  # noqa pylint: disable=no-member
 
     def __init__(self, name, suffixes, email, password, status=NEW):
         self.name = name

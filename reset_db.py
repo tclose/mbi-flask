@@ -3,7 +3,8 @@ import os.path as op
 from mbi_flask import db
 from datetime import datetime
 from mbi_flask.apps.reporting.models import (
-    Subject, ImagingSession, ScanType, Report, scan_type_assoc_table, Reporter)
+    Subject, ImagingSession, ScanType, Report, scantype_session_assoc_table,
+    scantype_report_assoc_table, User)
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
 db_path = op.join(op.dirname(__file__), 'app.db')
@@ -12,8 +13,8 @@ if op.exists(db_path):
 
 db.create_all()
 
-db.session.add(Reporter('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',  # noqa pylint: disable=no-member
-                        generate_password_hash('Jygbiq-juqrad-8seqxu')))
+db.session.add(User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',  # noqa pylint: disable=no-member
+                    generate_password_hash('Jygbiq-juqrad-8seqxu')))
 
 for i, (subj_id, dob, study_id, xnat_id, scan_date, priority) in enumerate([
         ('MSH103138', '12/03/1952', 1231, 'MRH100_124_MR02', '10/04/2017', 0),
