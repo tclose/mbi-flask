@@ -1,6 +1,7 @@
 import os.path as op
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
+from flask_breadcrumbs import Breadcrumbs
 
 apps_root = op.join(op.dirname(__file__), 'apps')
 
@@ -11,6 +12,8 @@ app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 app.config.from_object('config')
 
 db = SQLAlchemy(app)
+
+Breadcrumbs(app)
 
 
 @app.errorhandler(404)
