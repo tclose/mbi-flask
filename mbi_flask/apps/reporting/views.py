@@ -1,3 +1,4 @@
+from pprint import pprint
 import os.path as op
 from datetime import timedelta
 from flask import (
@@ -105,7 +106,7 @@ def register():
 
 
 @mod.route('/sessions', methods=['GET'])
-@register_breadcrumb(mod, '.sessions', 'Unreported Sessions')
+@register_breadcrumb(mod, '.sessions', 'Sessions to report')
 @requires_login('reporter')
 def sessions():
     """
@@ -122,7 +123,7 @@ def sessions():
         db.session.query(S)  # pylint: disable=no-member
         # Filter out sessions of subjects that have a more recent session
         .filter(~(
-            ImagingSession.query
+            db.session.query(ImagingSession)  # pylint: disable=no-member
             .filter(
                 ImagingSession.subject_id == S.subject_id,
                 ImagingSession.scan_date > S.scan_date)
@@ -130,22 +131,42 @@ def sessions():
         # Filter out sessions of subjects that have been reported on less than
         # the REPORT_INTERVAL (e.g. 365 days) beforehand
         .filter(~(
-            ImagingSession.query
+            db.session.query(ImagingSession)  # pylint: disable=no-member
             .join(Report)  # Only select sessions with a report
             .filter(
+                ImagingSession.id != S.id,
                 ImagingSession.subject_id == S.subject_id,
-                (sql.func.julianday(ImagingSession.scan_date) -
-                 sql.func.julianday(S.scan_date) <= REPORT_INTERVAL))
+                sql.func.abs(
+                    sql.func.julianday(ImagingSession.scan_date) -
+                    sql.func.julianday(S.scan_date)) <= REPORT_INTERVAL)
             .exists()))
         .order_by(S.priority.desc(),
                   S.scan_date))
+
+    test_q = (
+        db.session.query(S)
+        .join(ImagingSession, sql.and_(
+            S.subject_id == ImagingSession.subject_id,
+            S.id != ImagingSession.id))
+        .add_columns(
+            S.id,
+            ImagingSession.id,
+            S.scan_date,
+            ImagingSession.scan_date,
+            (sql.func.julianday(S.scan_date) -
+             sql.func.julianday(ImagingSession.scan_date)),
+            (sql.func.julianday(S.scan_date) -
+             sql.func.julianday(ImagingSession.scan_date) <= 365)))
+
+    print(test_q)
+    pprint(test_q.all())
 
     return render_template("reporting/sessions.html",
                            sessions=to_report)
 
 
 @mod.route('/report', methods=['GET', 'POST'])
-@register_breadcrumb(mod, '.sessions.report', 'Submit Report')
+@register_breadcrumb(mod, '.sessions.report', 'Report submission')
 @requires_login('reporter')
 def report():
     """

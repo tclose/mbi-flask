@@ -22,10 +22,10 @@
             "jinja": true
         },
         {
-            "name": "Python: Reset DB",
+            "name": "Python: Reset Test DB",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/reset_db.py",
+            "program": "${workspaceFolder}/reset_test_db.py",
             "console": "integratedTerminal"
         },
         {
