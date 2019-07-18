@@ -35,3 +35,6 @@ SESSION_PRIORITY = {
     MEDIUM: "High",
     HIGH: "Urgent"
 }
+
+# The number of days between sessions before a new report is required
+REPORT_INTERVAL = 365

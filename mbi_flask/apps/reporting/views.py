@@ -1,18 +1,21 @@
 import os.path as op
+from datetime import timedelta
 from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for)
 from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
-from sqlalchemy import sql
+from sqlalchemy import sql, orm
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
 from mbi_flask import db, templates_dir, static_dir
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, User, Report, ScanType
 from .decorators import requires_login
+from .constants import REPORT_INTERVAL
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.')
+
 
 @mod.before_request
 def before_request():
@@ -106,15 +109,41 @@ def register():
 @requires_login('reporter')
 def sessions():
     """
-    Display all sessions that still need to be reported
+    Display all sessions that still need to be reported.
     """
-    unreported_sessions = (
-        ImagingSession.query
-        .filter(~Report.query.filter_by(session_id=ImagingSession.id).exists())
-        .order_by(ImagingSession.priority.desc(),
-                  ImagingSession.scan_date))
+
+    # Create an alias to the ImagingSession model so we can search within its
+    # table for more recent sessions and earlier sessions that have been
+    # reported on
+    S = orm.aliased(ImagingSession)
+
+    # Only the latest session per subject is presented to be reported, and
+    # sessions of subjects that have already been reported in the last year are
+    # also omitted.
+    to_report = (
+        db.session.query(S)
+        # Filter out sessions of subjects that have a more recent session
+        .filter(~(
+            ImagingSession.query
+            .filter(
+                ImagingSession.subject_id == S.subject_id,
+                ImagingSession.scan_date > S.scan_date)
+            .exists()))
+        # Filter out sessions of subjects that have been reported on less than
+        # the REPORT_INTERVAL (e.g. a year) beforehand
+        .filter(~(
+            ImagingSession.query
+            .join(Report)  # Only select sessions with a report
+            .filter(
+                ImagingSession.subject_id == S.subject_id,
+                (sql.func.julianday(ImagingSession.scan_date) -
+                 sql.func.julianday(S.scan_date) <= REPORT_INTERVAL))
+            .exists()))
+        .order_by(S.priority.desc(),
+                  S.scan_date))
+
     return render_template("reporting/sessions.html",
-                           sessions=unreported_sessions)
+                           sessions=to_report)
 
 
 @mod.route('/report', methods=['GET', 'POST'])
