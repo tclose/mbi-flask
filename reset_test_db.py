@@ -47,18 +47,18 @@ for mbi_subj_id, dob in [('MSH103138', '12/03/1952'),
 img_sessions = {}
 
 for subj_id, study_id, xnat_id, xnat_uri, scan_date, priority in [
-        (1, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017', 0),
+        (1, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017', 1),
         (2, 1244, 'SHOULD_NOT_BE_SHOWN_NEWER_SESSION',
-         'MBI_XNAT_E00627', '11/02/2018', 0),
-        (2, 1254, 'MMH092_009_MRPT01', 'MBI_XNAT_E00628', '12/02/2018', 0),
-        (3, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629', '11/10/2017', 0),
+         'MBI_XNAT_E00627', '11/02/2018', 1),
+        (2, 1254, 'MMH092_009_MRPT01', 'MBI_XNAT_E00628', '12/02/2018', 1),
+        (3, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629', '11/10/2017', 1),
         (3, 1500, 'SHOULD_NOT_BE_SHOWN_PREV_REPORT',
-         'MBI_XNAT_E00630', '11/5/2018', 0),
-        (3, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631', '11/1/2019', 2),
-        (4, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632', '13/01/2019', 1),
-        (5, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633', '11/02/2019', 0),
-        (6, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634', '1/08/2017', 1),
-        (7, 9834, 'MRH099_003_MR03', 'MBI_XNAT_E00635', '10/11/2018', 1)]:
+         'MBI_XNAT_E00630', '11/5/2018', 1),
+        (3, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631', '11/1/2019', 3),
+        (4, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632', '13/01/2019', 2),
+        (5, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633', '11/02/2019', 1),
+        (6, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634', '1/08/2017', 2),
+        (7, 9834, 'SHOULD_BE_IGNORED', 'MBI_XNAT_E00635', '10/11/2018', 0)]:
     img_session = img_sessions[study_id] = ImagingSession(
         study_id, subj_id, xnat_id, xnat_uri,
         datetime.strptime(scan_date, '%d/%m/%Y'),

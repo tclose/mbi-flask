@@ -26,11 +26,13 @@ CONCLUSION = {
 }
 
 
-LOW = 0
-MEDIUM = 1
-HIGH = 2
+IGNORE = 0
+LOW = 1
+MEDIUM = 2
+HIGH = 3
 
 SESSION_PRIORITY = {
+    IGNORE: 'Ignored',
     LOW: "Low",
     MEDIUM: "High",
     HIGH: "Urgent"

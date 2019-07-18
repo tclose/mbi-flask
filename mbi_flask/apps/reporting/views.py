@@ -1,6 +1,6 @@
 from pprint import pprint
 import os.path as op
-from datetime import timedelta
+from datetime import timedelta, datetime
 import csv
 from flask import (
     Blueprint, request, render_template, flash, g, session,
@@ -13,7 +13,7 @@ from mbi_flask import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType
 from .decorators import requires_login
-from .constants import REPORT_INTERVAL
+from .constants import REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
@@ -124,6 +124,8 @@ def sessions():
     # Create query for sessions that still need to be reported
     to_report = (
         db.session.query(S)  # pylint: disable=no-member
+        # Filter out "ignored" sessions that are to be reported by AXIS
+        .filter(S.priority != IGNORE)
         # Filter out sessions of subjects that have a more recent session
         .filter(~(
             db.session.query(ImagingSession)  # pylint: disable=no-member
@@ -214,44 +216,71 @@ def import_():
         raise Exception("Could not find an FileMaker export file at {}"
                         .format(export_file))
     num_imported = 0
-    with xnatutils.connect(app.config['XNAT_URL']) as alfred_xnat:
+    num_skipped = 0
+    with xnatutils.connect(
+        server=app.config['XNAT_URL'], user=app.config['XNAT_USER'],
+            password=app.config['XNAT_PASSWORD']) as alfred_xnat:
         with open(export_file) as f:
             for row in csv.DictReader(f):
-                subject = Subject(row['SubjectID'], row['DOB'])
-                db.session.add(subject)  # pylint: disable=no-member
                 project_id = row['ProjectID']
-                if row['DarisID']:
-                    parts = row['DarisID'].split('.')
-                    if len(parts) > 4:
-                        visit_id = parts[5]
+                try:
+                    subject = Subject.query.filter_by(
+                        mbi_id=row['SubjectID']).one()
+                except orm.exc.NoResultFound:
+                    subject = Subject(row['SubjectID'],
+                                      datetime.strptime(row['DOB'],
+                                                        '%d/%m/%Y'))
+                    db.session.add(subject)  # pylint: disable=no-member
+                if ImagingSession.query.filter_by(
+                        id=row['StudyID']).one_or_none() is not None:
+                    if row['DarisID']:
+                        parts = row['DarisID'].split('.')
+                        if len(parts) > 4:
+                            visit_id = parts[5]
+                        else:
+                            visit_id = 1
+                        if project_id.startswith('MRH'):
+                            prefix = 'MR'
+                        elif project_id.startswith('MMH'):
+                            prefix = 'MRPT'
+                        else:
+                            raise Exception("Unknown project type '{}'"
+                                            .format(project_id))
+                        visit_id = '{}{0:02}'.format(prefix, visit_id)
+                        subject_id = '{:03}'.format(parts[2])
                     else:
-                        visit_id = 1
-                    if project_id.startswith('MRH'):
-                        prefix = 'MR'
-                    elif project_id.startswith('MMH'):
-                        prefix = 'MRPT'
+                        subject_id = row['XnatSubjectID']
+                        visit_id = row['XnatVisitID']
+                    xnat_id = '_'.join((project_id, subject_id, visit_id))
+                    exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
+                    avail_scan_types = []
+                    for scan in exp.scans.values():
+                        try:
+                            scan_type = ScanType.query.filter_by(
+                                name=scan.type).one()
+                        except orm.exc.NoResultFound:
+                            scan_type = ScanType(scan.type)
+                            db.session.add(scan_type)  # noqa pylint: disable=no-member
+                        avail_scan_types.append(scan_type)
+                    xnat_uri = exp.uri.split('/')[-1]
+                    scan_date = datetime.strptime(row['ScanDate'], '%d/%m/%Y')
+                    if scan_date < ALFRED_START_DATE:
+                        priority = IGNORE
                     else:
-                        raise Exception("Unknown project type '{}'"
-                                        .format(project_id))
-                    visit_id = '{}{0:02}'.format(prefix, visit_id)
-                    subject_id = '{:03}'.format(parts[2])
+                        priority = LOW
+                    session = ImagingSession(row['StudyID'], subject, xnat_id,
+                                             xnat_uri, scan_date,
+                                             avail_scan_types,
+                                             priority=priority)
+                    db.session.add(session)  # pylint: disable=no-member
+                    if row['MrReport']:
+                        db.session.add(Report())  # noqa pylint: disable=no-member
+                    if row['PetReport']:
+                        db.session.add(Report())  # noqa pylint: disable=no-member
+                    db.commit()  # pylint: disable=no-member
+                    num_imported += 1
                 else:
-                    subject_id = row['XnatSubjectID']
-                    visit_id = row['XnatVisitID']
-                xnat_id = '_'.join((project_id, subject_id, visit_id))
-                exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
-                avail_scan_types = []
-                for scan in exp.scans.values():
-                    scan_type = ScanType(scan.type)
-                    avail_scan_types.append(scan_type)
-                    db.session.add(scan_type)  # pylint: disable=no-member
-                xnat_uri = exp.uri.split('/')[-1]
-                session = ImagingSession(row['StudyID'], subject, xnat_id,
-                                         xnat_uri, row['ScanDate'],
-                                         avail_scan_types)
-                db.session.add(session)  # pylint: disable=no-member
-                db.commit()  # pylint: disable=no-member
-                num_imported += 1
+                    num_skipped += 1
     return render_template('reporting/import.html',
-                           num_imported=num_imported, num_skipped=0,
+                           num_imported=num_imported, num_skipped=num_skipped,
                            csv=dict(csv))
