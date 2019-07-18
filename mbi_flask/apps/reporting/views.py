@@ -112,14 +112,12 @@ def sessions():
     Display all sessions that still need to be reported.
     """
 
-    # Create an alias to the ImagingSession model so we can search within its
+    # Create an alias of the ImagingSession model so we can search within its
     # table for more recent sessions and earlier sessions that have been
-    # reported on
+    # reported
     S = orm.aliased(ImagingSession)
 
-    # Only the latest session per subject is presented to be reported, and
-    # sessions of subjects that have already been reported in the last year are
-    # also omitted.
+    # Create query for sessions that still need to be reported
     to_report = (
         db.session.query(S)  # pylint: disable=no-member
         # Filter out sessions of subjects that have a more recent session
@@ -130,7 +128,7 @@ def sessions():
                 ImagingSession.scan_date > S.scan_date)
             .exists()))
         # Filter out sessions of subjects that have been reported on less than
-        # the REPORT_INTERVAL (e.g. a year) beforehand
+        # the REPORT_INTERVAL (e.g. 365 days) beforehand
         .filter(~(
             ImagingSession.query
             .join(Report)  # Only select sessions with a report
