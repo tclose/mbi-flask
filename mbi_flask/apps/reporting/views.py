@@ -143,24 +143,6 @@ def sessions():
         .order_by(S.priority.desc(),
                   S.scan_date))
 
-    test_q = (
-        db.session.query(S)
-        .join(ImagingSession, sql.and_(
-            S.subject_id == ImagingSession.subject_id,
-            S.id != ImagingSession.id))
-        .add_columns(
-            S.id,
-            ImagingSession.id,
-            S.scan_date,
-            ImagingSession.scan_date,
-            (sql.func.julianday(S.scan_date) -
-             sql.func.julianday(ImagingSession.scan_date)),
-            (sql.func.julianday(S.scan_date) -
-             sql.func.julianday(ImagingSession.scan_date) <= 365)))
-
-    print(test_q)
-    pprint(test_q.all())
-
     return render_template("reporting/sessions.html",
                            sessions=to_report)
 
