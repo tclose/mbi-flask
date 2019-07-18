@@ -7,7 +7,7 @@ from flask import (
 from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
 from sqlalchemy import sql, orm
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
-from mbi_flask import db, templates_dir, static_dir
+from mbi_flask import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, User, Report, ScanType
 from .decorators import requires_login
@@ -134,7 +134,6 @@ def sessions():
             db.session.query(ImagingSession)  # pylint: disable=no-member
             .join(Report)  # Only select sessions with a report
             .filter(
-                ImagingSession.id != S.id,
                 ImagingSession.subject_id == S.subject_id,
                 sql.func.abs(
                     sql.func.julianday(ImagingSession.scan_date) -
@@ -201,4 +200,4 @@ def report():
     elif form.is_submitted():
         flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
-                           form=form)
+                           form=form, xnat_url=app.config['XNAT_URL'])

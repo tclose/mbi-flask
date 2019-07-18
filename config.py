@@ -11,6 +11,8 @@ SECRET_KEY = 'SecretKeyForSessionSigning'
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(repo_root, 'app.db')
 DATABASE_CONNECT_OPTIONS = {}
 
+XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
+
 THREADS_PER_PAGE = 8
 
 CSRF_ENABLED = True

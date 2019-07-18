@@ -17,7 +17,7 @@
     </tr>
     <tr>
         <td><b>XNAT ID:</b></td>
-        <td><a href="http://172.22.2.13/xnat/data/experiments/{{session.xnat_id}}">{{ session.xnat_id }}</a></td>
+        <td><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html">{{ session.xnat_id }}</a></td>
     </tr>
     <tr>
         <td><b>Scan Date:</b></td>

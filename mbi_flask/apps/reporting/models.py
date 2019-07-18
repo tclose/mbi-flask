@@ -97,7 +97,8 @@ class ImagingSession(db.Model):
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
-    xnat_id = db.Column(db.String(6))  # noqa pylint: disable=no-member
+    xnat_id = db.Column(db.String(50))  # noqa pylint: disable=no-member
+    xnat_uri = db.Column(db.String(200))  # noqa pylint: disable=no-member
     scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
 
@@ -108,11 +109,12 @@ class ImagingSession(db.Model):
         'ScanType',  # noqa pylint: disable=no-member
         secondary='reporting_session_scantype_assoc')
 
-    def __init__(self, id, subject_id, xnat_id, scan_date, avail_scan_types,
-                 priority=LOW):
+    def __init__(self, id, subject_id, xnat_id, xnat_uri, scan_date,
+                 avail_scan_types, priority=LOW):
         self.id = id
         self.subject_id = subject_id
         self.xnat_id = xnat_id
+        self.xnat_uri = xnat_uri
         self.scan_date = scan_date
         self.avail_scan_types = avail_scan_types
         self.priority = priority
