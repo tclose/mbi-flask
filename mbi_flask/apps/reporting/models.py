@@ -142,6 +142,9 @@ class Report(db.Model):
     findings = db.Column(db.Text)  # pylint: disable=no-member
     conclusion = db.Column(db.Integer)  # pylint: disable=no-member
     exported = db.Column(db.Boolean)  # pylint: disable=no-member
+    modality = db.Column(db.Integer)  # pylint: disable=no-member
+    # Whether the report was automatically added from FM import
+    dummy = db.Column(db.Boolean)  # pylint: disable=no-member
 
     # Relationships
     session = db.relationship('ImagingSession', back_populates='reports')  # noqa pylint: disable=no-member
@@ -151,13 +154,17 @@ class Report(db.Model):
         secondary='reporting_report_scantype_assoc')
 
     def __init__(self, session_id, reporter_id, findings, conclusion,
-                 used_scan_types, date=datetime.today()):
+                 used_scan_types, modality, exported=False,
+                 date=datetime.today(), dummy=False):
         self.session_id = session_id
         self.reporter_id = reporter_id
         self.findings = findings
         self.conclusion = conclusion
         self.used_scan_types = used_scan_types
+        self.exported = exported
         self.date = date
+        self.modality = modality
+        self.dummy = dummy
 
 
 class ScanType(db.Model):
