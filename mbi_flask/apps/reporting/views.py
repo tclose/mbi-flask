@@ -121,7 +121,7 @@ def sessions():
     # sessions of subjects that have already been reported in the last year are
     # also omitted.
     to_report = (
-        db.session.query(S)
+        db.session.query(S)  # pylint: disable=no-member
         # Filter out sessions of subjects that have a more recent session
         .filter(~(
             ImagingSession.query
