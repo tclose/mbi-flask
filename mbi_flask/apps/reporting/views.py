@@ -1,6 +1,7 @@
 from pprint import pprint
 import os.path as op
 from datetime import timedelta
+import csv
 from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for)
@@ -10,7 +11,7 @@ from werkzeug import check_password_hash, generate_password_hash  # noqa pylint:
 import xnatutils
 from mbi_flask import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
-from .models import ImagingSession, User, Report, ScanType
+from .models import Subject, ImagingSession, User, Report, ScanType
 from .decorators import requires_login
 from .constants import REPORT_INTERVAL
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
@@ -208,4 +209,49 @@ def report():
 @mod.route('/import', methods=['GET'])
 @requires_login('admin')
 def import_():
-    pass
+    export_file = app.config['FILEMAKER_EXPORT_FILE']
+    if not op.exists(export_file):
+        raise Exception("Could not find an FileMaker export file at {}"
+                        .format(export_file))
+    num_imported = 0
+    with xnatutils.connect(app.config['XNAT_URL']) as alfred_xnat:
+        with open(export_file) as f:
+            for row in csv.DictReader(f):
+                subject = Subject(row['SubjectID'], row['DOB'])
+                db.session.add(subject)  # pylint: disable=no-member
+                project_id = row['ProjectID']
+                if row['DarisID']:
+                    parts = row['DarisID'].split('.')
+                    if len(parts) > 4:
+                        visit_id = parts[5]
+                    else:
+                        visit_id = 1
+                    if project_id.startswith('MRH'):
+                        prefix = 'MR'
+                    elif project_id.startswith('MMH'):
+                        prefix = 'MRPT'
+                    else:
+                        raise Exception("Unknown project type '{}'"
+                                        .format(project_id))
+                    visit_id = '{}{0:02}'.format(prefix, visit_id)
+                    subject_id = '{:03}'.format(parts[2])
+                else:
+                    subject_id = row['XnatSubjectID']
+                    visit_id = row['XnatVisitID']
+                xnat_id = '_'.join((project_id, subject_id, visit_id))
+                exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
+                avail_scan_types = []
+                for scan in exp.scans.values():
+                    scan_type = ScanType(scan.type)
+                    avail_scan_types.append(scan_type)
+                    db.session.add(scan_type)  # pylint: disable=no-member
+                xnat_uri = exp.uri.split('/')[-1]
+                session = ImagingSession(row['StudyID'], subject, xnat_id,
+                                         xnat_uri, row['ScanDate'],
+                                         avail_scan_types)
+                db.session.add(session)  # pylint: disable=no-member
+                db.commit()  # pylint: disable=no-member
+                num_imported += 1
+    return render_template('reporting/import.html',
+                           num_imported=num_imported, num_skipped=0,
+                           csv=dict(csv))

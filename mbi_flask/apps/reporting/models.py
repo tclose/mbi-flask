@@ -109,10 +109,10 @@ class ImagingSession(db.Model):
         'ScanType',  # noqa pylint: disable=no-member
         secondary='reporting_session_scantype_assoc')
 
-    def __init__(self, id, subject_id, xnat_id, xnat_uri, scan_date,
+    def __init__(self, id, subject, xnat_id, xnat_uri, scan_date,
                  avail_scan_types, priority=LOW):
         self.id = id
-        self.subject_id = subject_id
+        self.subject = subject
         self.xnat_id = xnat_id
         self.xnat_uri = xnat_uri
         self.scan_date = scan_date

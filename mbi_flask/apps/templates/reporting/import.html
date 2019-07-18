@@ -1,0 +1,6 @@
+{% extends "reporting/base.html" %}
+{% block sub_heading %}FileMaker Import{% endblock %}
+{% block content %}
+Imported {{ num_imported }} sessions from FileMaker, {{ num_skipped }} previously imported sessions were skipped<br><br>
+{{ csv }}
+{% endblock %}
