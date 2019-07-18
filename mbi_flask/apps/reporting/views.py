@@ -7,12 +7,14 @@ from flask import (
 from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
 from sqlalchemy import sql, orm
 from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
+import xnatutils
 from mbi_flask import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import ImagingSession, User, Report, ScanType
 from .decorators import requires_login
 from .constants import REPORT_INTERVAL
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
+
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.')
@@ -34,10 +36,10 @@ def before_request():
 def index():
     # This should be edited to be a single jumping off page instead of
     # redirects
-    if g.user.has_role('admin'):
-        return redirect(url_for('reporting.admin'))
-    elif g.user.has_role('reporter'):
+    if g.user.has_role('reporter'):
         return redirect(url_for('reporting.sessions'))
+    elif g.user.has_role('admin'):
+        return redirect(url_for('reporting.admin'))
     else:
         raise Exception(
             "Unrecognised role for user {} ({})".format(
@@ -201,3 +203,9 @@ def report():
         flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
                            form=form, xnat_url=app.config['XNAT_URL'])
+
+
+@mod.route('/import', methods=['GET'])
+@requires_login('admin')
+def import_():
+    pass

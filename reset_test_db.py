@@ -2,14 +2,14 @@ import sys
 import os
 import os.path as op
 import random
-from mbi_flask import db
+from mbi_flask import db, app
 from datetime import datetime
 from mbi_flask.apps.reporting.models import (
     Subject, ImagingSession, ScanType, Report, session_scantype_assoc_table,
     report_scantype_assoc_table, user_role_assoc_table, User, Role)
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
-db_path = op.join(op.dirname(__file__), 'app.db')
+db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
 if op.exists(db_path):
     os.remove(db_path)
 
@@ -30,7 +30,10 @@ scan_types = [
 
 db.session.add(User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',  # noqa pylint: disable=no-member
                     generate_password_hash('Jygbiq-juqrad-8seqxu'),
-                    roles=[reporter_role], active=True))
+                    roles=[reporter_role, admin_role], active=True),
+               User('Parisa Zakavi', '', 'parisa.zakavi@monash.edu',  # noqa pylint: disable=no-member
+                    generate_password_hash('password'),
+                    roles=[reporter_role, admin_role], active=True))
 
 for mbi_subj_id, dob in [('MSH103138', '12/03/1952'),
                          ('MSH223132', '05/12/1951'),
