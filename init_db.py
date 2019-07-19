@@ -35,23 +35,6 @@ if not app.config['TEST']:
     db.session.add(User('Administrator', '', 'manager.mbi@monash.edu',  # noqa pylint: disable=no-member
                     generate_password_hash(admin_password),
                     roles=[admin_role], active=True))
-
-    # Add historial reporters for previously reported records
-    db.session.add(User('Dr. Nicholas Ferris', 'MBBS FRANZCR',  # noqa pylint: disable=no-member
-                    'nicholas.ferris@monash.edu',
-                    generate_password_hash(
-                        random.choices(string.printable, k=50)),
-                    roles=[reporter_role], active=False),
-               User('Dr. Paul Beech', 'MBBS FRANZCR FAANMS',
-                    'paul.beech@monash.edu',
-                    generate_password_hash(
-                        random.choices(string.printable, k=50)),
-                    roles=[reporter_role], active=False),
-               User('AXIS Reporting', '',
-                    'reporter@axis.com.au',
-                    generate_password_hash(
-                        random.choices(string.printable, k=50)),
-                    roles=[reporter_role], active=False))
 # Add dummy data to test with
 else:
     scan_types = [
@@ -61,23 +44,26 @@ else:
         ScanType('t2_space_sag_p2_iso'),
         ScanType('Head_No MT fl3d_axial_p2_iso')]
 
-    db.session.add(User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',  # noqa pylint: disable=no-member
-                        generate_password_hash('password'),
-                        roles=[reporter_role, admin_role], active=True),
-                   User('Parisa Zakavi', '', 'parisa.zakavi@monash.edu',  # noqa pylint: disable=no-member
-                        generate_password_hash('password'),
-                        roles=[reporter_role, admin_role], active=True))
+    db.session.add_all((  # noqa pylint: disable=no-member
+        User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',
+             generate_password_hash('password'),
+             roles=[reporter_role, admin_role], active=True),
+        User('Parisa Zakavi', '', 'parisa.zakavi@monash.edu',
+             generate_password_hash('password'),
+             roles=[reporter_role, admin_role], active=True)))
 
     subjects = []
 
-    for mbi_id, dob in [('MSH103138', '12/03/1952'),
-                        ('MSH223132', '05/12/1951'),
-                        ('MSH892342', '24/08/1980'),
-                        ('MSH234234', '21/09/1993'),
-                        ('MSH623177', '15/12/1967'),
-                        ('MSH823056', '27/06/2001'),
-                        ('MSH097334', '12/03/1972')]:
-        subj = Subject(mbi_id, datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
+    for mbi_id, dob, first_name, last_name in [
+        ('MSH103138', '12/03/1952', 'Bob', 'Brown'),
+        ('MSH223132', '05/12/1951', 'Sami', 'Shah'),
+        ('MSH892342', '24/08/1980', 'Bill', 'Bryson'),
+        ('MSH234234', '21/09/1993', 'Jesse', 'Jackson'),
+        ('MSH623177', '15/12/1967', 'Robert', 'Redford'),
+        ('MSH823056', '27/06/2001', 'Danny', 'DeVito'),
+            ('MSH097334', '12/03/1972', 'Boris', 'Becker')]:
+        subj = Subject(mbi_id, first_name, last_name,
+                       datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
         subjects.append(subj)
         db.session.add(subj)  # pylint: disable=no-member
 
@@ -101,7 +87,7 @@ else:
             study_id, subjects[subj_id], xnat_id, xnat_uri,
             datetime.strptime(scan_date, '%d/%m/%Y'),
             random.choices(scan_types,
-                           k=random.randint(1,len(scan_types) - 1)),
+                           k=random.randint(1, len(scan_types) - 1)),
             priority)
         db.session.add(img_session)  # noqa pylint: disable=no-member
 
@@ -112,5 +98,23 @@ else:
     img_session = img_sessions[1366]
     db.session.add(Report(img_session.id, 1, "Nothing to report", 0,  # noqa pylint: disable=no-member
                           img_session.avail_scan_types, MRI))
+
+# Add historial reporters for previously reported records
+db.session.add_all((  # noqa pylint: disable=no-member
+    User('Dr. Nicholas Ferris', 'MBBS FRANZCR',
+        'nicholas.ferris@monash.edu',
+        generate_password_hash(
+            ''.join(random.choices(string.printable, k=50))),
+        roles=[reporter_role], active=False),
+    User('Dr. Paul Beech', 'MBBS FRANZCR FAANMS',
+        'paul.beech@monash.edu',
+        generate_password_hash(
+            ''.join(random.choices(string.printable, k=50))),
+        roles=[reporter_role], active=False),
+    User('AXIS Reporting', '',
+        's.ahern@axisdi.com.au ',
+        generate_password_hash(
+            ''.join(random.choices(string.printable, k=50))),
+        roles=[reporter_role], active=False)))
 
 db.session.commit()  # noqa pylint: disable=no-member

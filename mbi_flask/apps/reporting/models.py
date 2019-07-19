@@ -17,7 +17,7 @@ class User(db.Model):
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
-    suffixes = db.Column(db.String(30), unique=True)  # noqa pylint: disable=no-member
+    suffixes = db.Column(db.String(30))  # noqa pylint: disable=no-member
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
     active = db.Column(db.Boolean())  # noqa pylint: disable=no-member
@@ -74,13 +74,17 @@ class Subject(db.Model):
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+    first_name = db.Column(db.String(100))  # pylint: disable=no-member
+    last_name = db.Column(db.String(100))  # pylint: disable=no-member
     dob = db.Column(db.Date())  # pylint: disable=no-member
 
     # Relationships
     sessions = db.relationship('ImagingSession', back_populates='subject')  # noqa pylint: disable=no-member
 
-    def __init__(self, mbi_id, dob):
+    def __init__(self, mbi_id, first_name, last_name, dob):
         self.mbi_id = mbi_id
+        self.first_name = first_name
+        self.last_name = last_name
         self.dob = dob
 
     def __repr__(self):

@@ -8,3 +8,4 @@
 mbi_flask/apps/static/scss/.sass-cache
 config.py
 reports_status.csv
+reports_status-reduced.csv

@@ -1,6 +1,24 @@
 {% extends "reporting/base.html" %}
 {% block sub_heading %}FileMaker Import{% endblock %}
 {% block content %}
-Imported {{ num_imported }} sessions from FileMaker, {{ num_skipped }} previously imported sessions were skipped<br><br>
-{{ csv }}
+Imported {{ num_imported }} sessions from FileMaker, {{ num_prev }} previously imported sessions were skipped<br><br>
+{% if skipped %}
+<h3>Skipped sessions due to missing data</h3>
+<table>
+    <thead>
+        <tr>
+            {% for k in skipped[0].keys() %}
+            <th>{{ k }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    {% for row in skipped %}
+        <tr>
+            {% for v in row.values %}
+            <td>{{ v }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+</table>
+{% endif %}
 {% endblock %}

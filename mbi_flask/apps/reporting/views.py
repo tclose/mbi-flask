@@ -193,7 +193,8 @@ def report():
             findings=form.findings.data,
             conclusion=form.conclusion.data,
             used_scan_types=ScanType.query.filter(
-                ScanType.id.in_(form.scan_types.data)).all())
+                ScanType.id.in_(form.scan_types.data)).all(),
+            modality=MRI)
 
         # Insert the record in our database and commit it
         db.session.add(report)  # pylint: disable=no-member
@@ -217,43 +218,50 @@ def import_():
         raise Exception("Could not find an FileMaker export file at {}"
                         .format(export_file))
     num_imported = 0
-    num_skipped = 0
+    num_prev = 0
+    skipped = []
+
     # Get previous reporters
     nick_ferris = User.query.filter_by(
-        email='Nicholas.Ferris@monash.edu').one()
-    paul_beech = User.query.filter_by(email='Paul.Beech@monash.edu').one()
+        email='nicholas.ferris@monash.edu').one()
+    paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
     axis = User.query.filter_by(name='AXIS Reporting')
-    with xnatutils.connect(server=app.config['XNAT_URL']) as alfred_xnat:  # password=app.config['XNAT_PASSWORD'], user=app.config['XNAT_USER']
+    with xnatutils.connect(server=app.config['XNAT_URL']) as alfred_xnat:
         with open(export_file) as f:
             for row in csv.DictReader(f):
-                project_id = row['ProjectID']
+                project_id = row['ProjectID'].strip()
+                if not project_id.startswith('M'):
+                    skipped.append(row)
+                    continue
+                mbi_subject_id = row['SubjectID'].strip()
+                study_id = row['StudyID'].strip()
+                first_name = row['FirstName'].strip()
+                last_name = row['LastName'].strip()
                 try:
                     subject = Subject.query.filter_by(
-                        mbi_id=row['SubjectID']).one()
+                        mbi_id=mbi_subject_id).one()
                 except orm.exc.NoResultFound:
-                    subject = Subject(row['SubjectID'],
+                    subject = Subject(mbi_subject_id,
+                                      first_name, last_name,
                                       datetime.strptime(row['DOB'],
                                                         '%d/%m/%Y'))
                     db.session.add(subject)  # pylint: disable=no-member
-                if ImagingSession.query.get(row['StudyID']) is None:
+                if ImagingSession.query.get(study_id) is None:
                     if row['DarisID']:
                         parts = row['DarisID'].split('.')
                         if len(parts) > 4:
                             visit_id = int(parts[5])
                         else:
                             visit_id = 1
-                        if project_id.startswith('MRH'):
-                            prefix = 'MR'
-                        elif project_id.startswith('MMH'):
+                        if project_id.startswith('MMH'):
                             prefix = 'MRPT'
                         else:
-                            raise Exception("Unknown project type '{}'"
-                                            .format(project_id))
+                            prefix = 'MR'
                         visit_id = '{}{:02}'.format(prefix, visit_id)
-                        subject_id = '{:03}'.format(int(parts[2]))
+                        subject_id = '{:03}'.format(int(parts[3]))
                     else:
-                        subject_id = row['XnatSubjectID']
-                        visit_id = row['XnatVisitID']
+                        subject_id = row['XnatSubjectID'].strip()
+                        visit_id = row['XnatVisitID'].strip()
                     xnat_id = '_'.join((project_id, subject_id, visit_id))
                     exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
                     avail_scan_types = []
@@ -267,16 +275,17 @@ def import_():
                         avail_scan_types.append(scan_type)
                     xnat_uri = exp.uri.split('/')[-1]
                     scan_date = datetime.strptime(row['ScanDate'], '%d/%m/%Y')
-                    if scan_date < ALFRED_START_DATE:
-                        priority = IGNORE
-                    else:
-                        priority = LOW
-                    session = ImagingSession(row['StudyID'], subject, xnat_id,
+                    # if scan_date < ALFRED_START_DATE:
+                    #     priority = IGNORE
+                    # else:
+                    priority = LOW
+                    session = ImagingSession(study_id, subject,
+                                             xnat_id,
                                              xnat_uri, scan_date,
                                              avail_scan_types,
                                              priority=priority)
                     db.session.add(session)  # pylint: disable=no-member
-                    if row['MrReport']:
+                    if row['MrReport'].strip():
                         if 'MSH' in row['MrReport']:
                             reporter = axis
                         else:
@@ -284,14 +293,14 @@ def import_():
                         db.session.add(Report(  # noqa pylint: disable=no-member
                             session.id, reporter.id, '', NOT_RECORDED,
                             [], MRI, date=scan_date, dummy=True))
-                    if row['PetReport']:
+                    if row['PetReport'].strip():
                         db.session.add(Report(  # noqa pylint: disable=no-member
                             session.id, paul_beech.id, '', NOT_RECORDED,
                             [], PET, date=scan_date, dummy=True))  # noqa pylint: disable=no-member
-                    db.commit()  # pylint: disable=no-member
+                    db.session.commit()  # pylint: disable=no-member
                     num_imported += 1
                 else:
-                    num_skipped += 1
+                    num_prev += 1
     return render_template('reporting/import.html',
-                           num_imported=num_imported, num_skipped=num_skipped,
-                           csv=dict(csv))
+                           num_imported=num_imported, num_prev=num_prev,
+                           skipped=skipped)
