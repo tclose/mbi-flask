@@ -263,8 +263,12 @@ def import_():
                         visit_id = '{}{:02}'.format(prefix, int(visit_id))
                         subject_id = '{:03}'.format(int(subject_id))
                     else:
-                        subject_id = row['XnatSubjectID'].strip()
-                        visit_id = row['XnatVisitID'].strip()
+                        try:
+                            subject_id = row['XnatSubjectID'].strip()
+                            visit_id = row['XnatVisitID'].strip()
+                        except KeyError:
+                            malformed.append(row)
+                            continue
                     xnat_id = '_'.join((project_id, subject_id, visit_id))
                     try:
                         exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
