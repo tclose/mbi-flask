@@ -2,22 +2,41 @@
 {% block sub_heading %}FileMaker Import{% endblock %}
 {% block content %}
 Imported {{ num_imported }} sessions from FileMaker, {{ num_prev }} previously imported sessions were skipped<br><br>
-{% if skipped %}
-<h3>Skipped sessions due to missing data</h3>
+{% if malformed %}
+<h3>Skipped sessions due to malformed FileMaker export rows</h3>
 <table>
     <thead>
         <tr>
-            {% for k in skipped[0].keys() %}
+            {% for k in malformed[0].keys() %}
             <th>{{ k }}</th>
             {% endfor %}
         </tr>
     </thead>
-    {% for row in skipped %}
+    {% for row in malformed %}
         <tr>
             {% for v in row.values %}
             <td>{{ v }}</td>
             {% endfor %}
         </tr>
+    {% endfor %}
+</table>
+{% endif %}<br><br>
+{% if no_xnat %}
+<h3>Skipped sessions due to missing data on XNAT</h3>
+<table>
+    <thead>
+        <tr>
+            {% for k in no_xnat[0].keys() %}
+            <th>{{ k }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    {% for row in no_xnat %}
+    <tr>
+        {% for v in row.values %}
+        <td>{{ v }}</td>
+        {% endfor %}
+    </tr>
     {% endfor %}
 </table>
 {% endif %}

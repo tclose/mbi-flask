@@ -223,8 +223,8 @@ def import_():
                         .format(export_file))
     num_imported = 0
     num_prev = 0
-    skipped = []
-
+    malformed = []
+    no_xnat = []
     # Get previous reporters
     nick_ferris = User.query.filter_by(
         email='nicholas.ferris@monash.edu').one()
@@ -235,7 +235,7 @@ def import_():
             for row in csv.DictReader(f):
                 project_id = row['ProjectID'].strip()
                 if not project_id.startswith('M'):
-                    skipped.append(row)
+                    malformed.append(row)
                     continue
                 mbi_subject_id = row['SubjectID'].strip()
                 study_id = row['StudyID'].strip()
@@ -266,7 +266,11 @@ def import_():
                         subject_id = row['XnatSubjectID'].strip()
                         visit_id = row['XnatVisitID'].strip()
                     xnat_id = '_'.join((project_id, subject_id, visit_id))
-                    exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
+                    try:
+                        exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
+                    except KeyError:
+                        no_xnat.append(row)
+                        continue
                     avail_scan_types = []
                     for scan in exp.scans.values():
                         try:
@@ -306,4 +310,4 @@ def import_():
                     num_prev += 1
     return render_template('reporting/import.html',
                            num_imported=num_imported, num_prev=num_prev,
-                           skipped=skipped)
+                           malformed=malformed, no_xnat=no_xnat)
