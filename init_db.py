@@ -1,6 +1,7 @@
 import sys
 import os
 import os.path as op
+import getpass
 import random
 import string
 from mbi_flask import db, app
@@ -28,9 +29,11 @@ db.session.add(admin_role)  # noqa pylint: disable=no-member
 db.session.add(reporter_role)  # noqa pylint: disable=no-member
 
 if not app.config['TEST']:
+    admin_password = getpass.getpass(
+        "Please enter password for admin account ('manager.mbi@monash.edu'): ")
     # Add administrator
     db.session.add(User('Administrator', '', 'manager.mbi@monash.edu',  # noqa pylint: disable=no-member
-                    generate_password_hash(),
+                    generate_password_hash(admin_password),
                     roles=[admin_role], active=True))
 
     # Add historial reporters for previously reported records
@@ -38,17 +41,17 @@ if not app.config['TEST']:
                     'nicholas.ferris@monash.edu',
                     generate_password_hash(
                         random.choices(string.printable, k=50)),
-                    roles=[], active=False),
+                    roles=[reporter_role], active=False),
                User('Dr. Paul Beech', 'MBBS FRANZCR FAANMS',
                     'paul.beech@monash.edu',
                     generate_password_hash(
                         random.choices(string.printable, k=50)),
-                    roles=[], active=False),
+                    roles=[reporter_role], active=False),
                User('AXIS Reporting', '',
                     'reporter@axis.com.au',
                     generate_password_hash(
                         random.choices(string.printable, k=50)),
-                    roles=[], active=False))
+                    roles=[reporter_role], active=False))
 # Add dummy data to test with
 else:
     scan_types = [
@@ -65,34 +68,37 @@ else:
                         generate_password_hash('password'),
                         roles=[reporter_role, admin_role], active=True))
 
-    for mbi_subj_id, dob in [('MSH103138', '12/03/1952'),
-                            ('MSH223132', '05/12/1951'),
-                            ('MSH892342', '24/08/1980'),
-                            ('MSH234234', '21/09/1993'),
-                            ('MSH623177', '15/12/1967'),
-                            ('MSH823056', '27/06/2001'),
-                            ('MSH097334', '12/03/1972')]:
-        db.session.add(Subject(mbi_subj_id, datetime.strptime(dob,  # noqa pylint: disable=no-member
-                                                              '%d/%m/%Y')))
+    subjects = []
+
+    for mbi_id, dob in [('MSH103138', '12/03/1952'),
+                        ('MSH223132', '05/12/1951'),
+                        ('MSH892342', '24/08/1980'),
+                        ('MSH234234', '21/09/1993'),
+                        ('MSH623177', '15/12/1967'),
+                        ('MSH823056', '27/06/2001'),
+                        ('MSH097334', '12/03/1972')]:
+        subj = Subject(mbi_id, datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
+        subjects.append(subj)
+        db.session.add(subj)  # pylint: disable=no-member
 
     img_sessions = {}
 
     for subj_id, study_id, xnat_id, xnat_uri, scan_date, priority in [
-            (1, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017', 1),
-            (2, 1244, 'SHOULD_NOT_BE_SHOWN_NEWER_SESSION',
+            (0, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017', 1),
+            (1, 1244, 'SHOULD_NOT_BE_SHOWN_NEWER_SESSION',
              'MBI_XNAT_E00627', '11/02/2018', 1),
-            (2, 1254, 'MMH092_009_MRPT01', 'MBI_XNAT_E00628', '12/02/2018', 1),
-            (3, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629', '11/10/2017', 1),
-            (3, 1500, 'SHOULD_NOT_BE_SHOWN_PREV_REPORT',
+            (1, 1254, 'MMH092_009_MRPT01', 'MBI_XNAT_E00628', '12/02/2018', 1),
+            (2, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629', '11/10/2017', 1),
+            (2, 1500, 'SHOULD_NOT_BE_SHOWN_PREV_REPORT',
              'MBI_XNAT_E00630', '11/5/2018', 1),
-            (3, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631', '11/1/2019', 3),
-            (4, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632', '13/01/2019', 2),
-            (5, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633', '11/02/2019', 1),
-            (6, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634', '1/08/2017', 2),
-            (7, 9834, 'SHOULD_BE_IGNORED', 'MBI_XNAT_E00635', '10/11/2018',
+            (2, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631', '11/1/2019', 3),
+            (3, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632', '13/01/2019', 2),
+            (4, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633', '11/02/2019', 1),
+            (5, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634', '1/08/2017', 2),
+            (6, 9834, 'SHOULD_BE_IGNORED', 'MBI_XNAT_E00635', '10/11/2018',
              0)]:
         img_session = img_sessions[study_id] = ImagingSession(
-            study_id, subj_id, xnat_id, xnat_uri,
+            study_id, subjects[subj_id], xnat_id, xnat_uri,
             datetime.strptime(scan_date, '%d/%m/%Y'),
             random.choices(scan_types,
                            k=random.randint(1,len(scan_types) - 1)),
