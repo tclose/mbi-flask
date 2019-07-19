@@ -14,7 +14,7 @@ Imported {{ num_imported }} sessions from FileMaker, {{ num_prev }} previously i
     </thead>
     {% for row in malformed %}
         <tr>
-            {% for v in row.values %}
+            {% for v in row.values() %}
             <td>{{ v }}</td>
             {% endfor %}
         </tr>
@@ -33,11 +33,30 @@ Imported {{ num_imported }} sessions from FileMaker, {{ num_prev }} previously i
     </thead>
     {% for row in no_xnat %}
     <tr>
-        {% for v in row.values %}
+        {% for v in row.values() %}
         <td>{{ v }}</td>
         {% endfor %}
     </tr>
     {% endfor %}
 </table>
 {% endif %}
+{% if malformed %}
+<h3>Skipped sessions as they were not required</h3>
+<table>
+    <thead>
+        <tr>
+            {% for k in skipped[0].keys() %}
+            <th>{{ k }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    {% for row in skipped %}
+    <tr>
+        {% for v in row.values() %}
+        <td>{{ v }}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}<br><br>
 {% endblock %}

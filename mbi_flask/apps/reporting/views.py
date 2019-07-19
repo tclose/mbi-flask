@@ -223,19 +223,24 @@ def import_():
                         .format(export_file))
     num_imported = 0
     num_prev = 0
+    skipped = []
     malformed = []
     no_xnat = []
     # Get previous reporters
     nick_ferris = User.query.filter_by(
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
-    axis = User.query.filter_by(name='AXIS Reporting')
+    axis = User.query.filter_by(name='AXIS Reporting').one()
     with xnatutils.connect(server=app.config['XNAT_URL']) as alfred_xnat:
         with open(export_file) as f:
             for row in csv.DictReader(f):
-                project_id = row['ProjectID'].strip()
-                if not project_id.startswith('M'):
+                project_id = row['ProjectID']
+                if project_id is None:
                     malformed.append(row)
+                    continue
+                project_id = project_id.strip()
+                if not project_id.startswith('M'):
+                    skipped.append(row)
                     continue
                 mbi_subject_id = row['SubjectID'].strip()
                 study_id = row['StudyID'].strip()
@@ -256,12 +261,6 @@ def import_():
                             row['DarisID']).groups()
                         if visit_id is None:
                             visit_id = 1
-                        if project_id.startswith('MMH'):
-                            prefix = 'MRPT'
-                        else:
-                            prefix = 'MR'
-                        visit_id = '{}{:02}'.format(prefix, int(visit_id))
-                        subject_id = '{:03}'.format(int(subject_id))
                     else:
                         try:
                             subject_id = row['XnatSubjectID'].strip()
@@ -269,6 +268,17 @@ def import_():
                         except KeyError:
                             malformed.append(row)
                             continue
+                    try:
+                        subject_id = int(subject_id)
+                    except ValueError:
+                        pass
+                    else:
+                        subject_id = '{:03}'.format(subject_id)
+                    if project_id.startswith('MMH'):
+                        visit_prefix = 'MRPT'
+                    else:
+                        visit_prefix = 'MR'
+                    visit_id = '{}{:02}'.format(visit_prefix, int(visit_id))
                     xnat_id = '_'.join((project_id, subject_id, visit_id))
                     try:
                         exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
@@ -312,6 +322,8 @@ def import_():
                     num_imported += 1
                 else:
                     num_prev += 1
+                print(num_imported)
     return render_template('reporting/import.html',
                            num_imported=num_imported, num_prev=num_prev,
-                           malformed=malformed, no_xnat=no_xnat)
+                           malformed=malformed, no_xnat=no_xnat,
+                           skipped=skipped)
