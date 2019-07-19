@@ -13,7 +13,8 @@ from mbi_flask import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType
 from .decorators import requires_login
-from .constants import REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE
+from .constants import (
+    REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE, NOT_RECORDED, MRI, PET)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
@@ -217,9 +218,12 @@ def import_():
                         .format(export_file))
     num_imported = 0
     num_skipped = 0
-    with xnatutils.connect(
-        server=app.config['XNAT_URL'], user=app.config['XNAT_USER'],
-            password=app.config['XNAT_PASSWORD']) as alfred_xnat:
+    # Get previous reporters
+    nick_ferris = User.query.filter_by(
+        email='Nicholas.Ferris@monash.edu').one()
+    paul_beech = User.query.filter_by(email='Paul.Beech@monash.edu').one()
+    axis = User.query.filter_by(name='AXIS Reporting')
+    with xnatutils.connect(server=app.config['XNAT_URL']) as alfred_xnat:  # password=app.config['XNAT_PASSWORD'], user=app.config['XNAT_USER']
         with open(export_file) as f:
             for row in csv.DictReader(f):
                 project_id = row['ProjectID']
@@ -231,12 +235,11 @@ def import_():
                                       datetime.strptime(row['DOB'],
                                                         '%d/%m/%Y'))
                     db.session.add(subject)  # pylint: disable=no-member
-                if ImagingSession.query.filter_by(
-                        id=row['StudyID']).one_or_none() is not None:
+                if ImagingSession.query.get(row['StudyID']) is None:
                     if row['DarisID']:
                         parts = row['DarisID'].split('.')
                         if len(parts) > 4:
-                            visit_id = parts[5]
+                            visit_id = int(parts[5])
                         else:
                             visit_id = 1
                         if project_id.startswith('MRH'):
@@ -246,8 +249,8 @@ def import_():
                         else:
                             raise Exception("Unknown project type '{}'"
                                             .format(project_id))
-                        visit_id = '{}{0:02}'.format(prefix, visit_id)
-                        subject_id = '{:03}'.format(parts[2])
+                        visit_id = '{}{:02}'.format(prefix, visit_id)
+                        subject_id = '{:03}'.format(int(parts[2]))
                     else:
                         subject_id = row['XnatSubjectID']
                         visit_id = row['XnatVisitID']
@@ -274,9 +277,17 @@ def import_():
                                              priority=priority)
                     db.session.add(session)  # pylint: disable=no-member
                     if row['MrReport']:
-                        db.session.add(Report())  # noqa pylint: disable=no-member
+                        if 'MSH' in row['MrReport']:
+                            reporter = axis
+                        else:
+                            reporter = nick_ferris
+                        db.session.add(Report(  # noqa pylint: disable=no-member
+                            session.id, reporter.id, '', NOT_RECORDED,
+                            [], MRI, date=scan_date, dummy=True))
                     if row['PetReport']:
-                        db.session.add(Report())  # noqa pylint: disable=no-member
+                        db.session.add(Report(  # noqa pylint: disable=no-member
+                            session.id, paul_beech.id, '', NOT_RECORDED,
+                            [], PET, date=scan_date, dummy=True))  # noqa pylint: disable=no-member
                     db.commit()  # pylint: disable=no-member
                     num_imported += 1
                 else:

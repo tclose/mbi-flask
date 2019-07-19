@@ -10,7 +10,7 @@ def requires_login(role=None):
             accepted = False
             if g.user is None:
                 flash('You need to be signed in to access that page.',
-                      'warning')
+                      'info')
             elif not g.user.active:
                 flash(("Your user account has been created but still needs " +
                        "to be activiated, please contact {} if this takes " +

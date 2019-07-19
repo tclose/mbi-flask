@@ -1,3 +1,5 @@
+from datetime import datetime
+
 INACTIVE = 0
 NEW = 1
 ACTIVE = 2
@@ -8,6 +10,7 @@ REPORTER_STATUS = {
     ACTIVE: 'active',
 }
 
+NOT_RECORDED = -1
 NONE = 0
 NONURGENT = 1
 CRITICAL = 2
@@ -40,3 +43,15 @@ SESSION_PRIORITY = {
 
 # The number of days between sessions before a new report is required
 REPORT_INTERVAL = 365
+
+
+ALFRED_START_DATE = datetime(2019, 6, 1)
+
+
+MRI = 0
+PET = 1
+
+MODALITIES = {
+    MRI: "MRI",
+    PET: "PET"
+}
