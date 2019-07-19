@@ -1,5 +1,6 @@
 from pprint import pprint
 import os.path as op
+import re
 from datetime import timedelta, datetime
 import csv
 from flask import (
@@ -20,6 +21,9 @@ from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.')
+
+
+daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
 
 
 @mod.before_request
@@ -248,17 +252,16 @@ def import_():
                     db.session.add(subject)  # pylint: disable=no-member
                 if ImagingSession.query.get(study_id) is None:
                     if row['DarisID']:
-                        parts = row['DarisID'].split('.')
-                        if len(parts) > 4:
-                            visit_id = int(parts[5])
-                        else:
+                        _, subject_id, visit_id = daris_id_re.match(
+                            row['DarisID']).groups()
+                        if visit_id is None:
                             visit_id = 1
                         if project_id.startswith('MMH'):
                             prefix = 'MRPT'
                         else:
                             prefix = 'MR'
-                        visit_id = '{}{:02}'.format(prefix, visit_id)
-                        subject_id = '{:03}'.format(int(parts[3]))
+                        visit_id = '{}{:02}'.format(prefix, int(visit_id))
+                        subject_id = '{:03}'.format(int(subject_id))
                     else:
                         subject_id = row['XnatSubjectID'].strip()
                         visit_id = row['XnatVisitID'].strip()
