@@ -5,11 +5,13 @@
     function report_on(session_id) {
         report_form = document.forms['report_form']
         report_form.session_id.value = session_id
+        report_form.selected_only.value = true
         report_form.submit();
     }
 </script>
 <form name="report_form" method="POST" action="{{ url_for('reporting.report') }}">
     <input type="hidden" name="session_id">
+    <input type="hidden" name="selected_only">
 </form>
 <table class="sessions">
     <thead>

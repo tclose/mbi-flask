@@ -46,3 +46,4 @@ class ReportForm(Form):
     scan_types = MultiCheckboxField('Scans used', [DataRequired()],
                                     coerce=int)
     session_id = HiddenField('session_id')
+    selected_only = HiddenField('selected_only', default=False)

@@ -166,13 +166,7 @@ def report():
 
     form = ReportForm(request.form)
 
-    try:
-        session_id = request.args['session_id']
-    except KeyError:
-        if form.is_submitted():
-            session_id = form.session_id.data
-        else:
-            raise Exception("session_id was not provided in request url")
+    session_id = form.session_id.data
 
     # Retrieve session from database
     img_session = ImagingSession.query.filter_by(
@@ -184,32 +178,32 @@ def report():
                 session_id))
 
     # Dynamically set form fields
-    form.session_id.data = session_id
     form.scan_types.choices = [
         (t.id, t.name) for t in img_session.avail_scan_types]
 
-    if form.validate_on_submit():
+    if form.selected_only.data != 'true':  # From sessions page
+        if form.validate_on_submit():
 
-        # create an report instance not yet stored in the database
-        report = Report(
-            session_id=session_id,
-            reporter_id=g.user.id,
-            findings=form.findings.data,
-            conclusion=int(form.conclusion.data),
-            used_scan_types=ScanType.query.filter(
-                ScanType.id.in_(form.scan_types.data)).all(),
-            modality=MRI)
+            # create an report instance not yet stored in the database
+            report = Report(
+                session_id=session_id,
+                reporter_id=g.user.id,
+                findings=form.findings.data,
+                conclusion=int(form.conclusion.data),
+                used_scan_types=ScanType.query.filter(
+                    ScanType.id.in_(form.scan_types.data)).all(),
+                modality=MRI)
 
-        # Insert the record in our database and commit it
-        db.session.add(report)  # pylint: disable=no-member
-        db.session.commit()  # pylint: disable=no-member
+            # Insert the record in our database and commit it
+            db.session.add(report)  # pylint: disable=no-member
+            db.session.commit()  # pylint: disable=no-member
 
-        # flash will display a message to the user
-        flash('Report submitted for {}'.format(session_id), 'success')
-        # redirect user to the 'home' method of the user module.
-        return redirect(url_for('reporting.sessions'))
-    elif form.is_submitted():
-        flash("Some of the submitted values were invalid", "error")
+            # flash will display a message to the user
+            flash('Report submitted for {}'.format(session_id), 'success')
+            # redirect user to the 'home' method of the user module.
+            return redirect(url_for('reporting.sessions'))
+        else:
+            flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
                            form=form, xnat_url=app.config['XNAT_URL'])
 
