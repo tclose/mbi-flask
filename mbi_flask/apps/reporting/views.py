@@ -239,7 +239,7 @@ def import_():
                     malformed.append(row)
                     continue
                 project_id = project_id.strip()
-                if not project_id.startswith('M'):
+                if not project_id.startswith('M') or project_id[2] == 'A':
                     skipped.append(row)
                     continue
                 mbi_subject_id = row['SubjectID'].strip()
@@ -260,12 +260,15 @@ def import_():
                         _, subject_id, visit_id = daris_id_re.match(
                             row['DarisID']).groups()
                         if visit_id is None:
-                            visit_id = 1
+                            visit_id = '1'
                     else:
                         try:
                             subject_id = row['XnatSubjectID'].strip()
                             visit_id = row['XnatVisitID'].strip()
                         except KeyError:
+                            malformed.append(row)
+                            continue
+                        if not subject_id or not visit_id:
                             malformed.append(row)
                             continue
                     try:
@@ -278,8 +281,12 @@ def import_():
                         visit_prefix = 'MRPT'
                     else:
                         visit_prefix = 'MR'
-                    visit_id = '{}{:02}'.format(visit_prefix, int(visit_id))
-                    xnat_id = '_'.join((project_id, subject_id, visit_id))
+                    numeral, suffix = re.match(r'(\d+)(.*)', visit_id).groups()
+                    visit_id = '{}{:02}{}'.format(
+                        visit_prefix, int(numeral),
+                        (suffix if suffix is not None else ''))
+                    xnat_id = '_'.join(
+                        (project_id, subject_id, visit_id)).upper()
                     try:
                         exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
                     except KeyError:
@@ -306,7 +313,7 @@ def import_():
                                              avail_scan_types,
                                              priority=priority)
                     db.session.add(session)  # pylint: disable=no-member
-                    if row['MrReport'].strip():
+                    if row['MrReport'] is not None and row['MrReport'].strip():
                         if 'MSH' in row['MrReport']:
                             reporter = axis
                         else:
@@ -314,15 +321,16 @@ def import_():
                         db.session.add(Report(  # noqa pylint: disable=no-member
                             session.id, reporter.id, '', NOT_RECORDED,
                             [], MRI, date=scan_date, dummy=True))
-                    if row['PetReport'].strip():
+                    if (row['PetReport'] is not None and
+                            row['PetReport'].strip()):
                         db.session.add(Report(  # noqa pylint: disable=no-member
                             session.id, paul_beech.id, '', NOT_RECORDED,
                             [], PET, date=scan_date, dummy=True))  # noqa pylint: disable=no-member
                     db.session.commit()  # pylint: disable=no-member
                     num_imported += 1
+                    print(study_id)
                 else:
                     num_prev += 1
-                print(num_imported)
     return render_template('reporting/import.html',
                            num_imported=num_imported, num_prev=num_prev,
                            malformed=malformed, no_xnat=no_xnat,
