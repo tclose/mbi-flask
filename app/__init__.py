@@ -3,10 +3,8 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_breadcrumbs import Breadcrumbs
 
-apps_root = op.join(op.dirname(__file__), 'apps')
-
-templates_dir = op.join(apps_root, 'templates')
-static_dir = op.join(apps_root, 'static')
+templates_dir = op.join(op.dirname(__file__), 'templates')
+static_dir = op.join(op.dirname(__file__), 'static')
 
 app = Flask(__name__, template_folder=templates_dir, static_folder=static_dir)
 app.config.from_object('config')

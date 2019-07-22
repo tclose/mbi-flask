@@ -195,7 +195,7 @@ def report():
             session_id=session_id,
             reporter_id=g.user.id,
             findings=form.findings.data,
-            conclusion=form.conclusion.data,
+            conclusion=int(form.conclusion.data),
             used_scan_types=ScanType.query.filter(
                 ScanType.id.in_(form.scan_types.data)).all(),
             modality=MRI)

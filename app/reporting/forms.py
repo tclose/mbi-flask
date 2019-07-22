@@ -41,8 +41,8 @@ class ReportForm(Form):
     findings = TextAreaField('Findings', [])
     conclusion = SelectField(
         'Conclusion',
-        choices=[(None, '')] + [(i, s) for i, (s, _) in CONCLUSION.items()],
-        coerce=int)
+        choices=[(None, '')] + [(str(i), s)
+                                for i, (s, _) in CONCLUSION.items()])
     scan_types = MultiCheckboxField('Scans used', [DataRequired()],
                                     coerce=int)
     session_id = HiddenField('session_id')
