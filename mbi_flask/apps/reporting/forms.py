@@ -40,7 +40,8 @@ class ReportForm(Form):
 
     findings = TextAreaField('Findings', [])
     conclusion = SelectField(
-        'Conclusion', choices=[(i, s) for i, (s, _) in CONCLUSION.items()],
+        'Conclusion',
+        choices=[(None, '')] + [(i, s) for i, (s, _) in CONCLUSION.items()],
         coerce=int)
     scan_types = MultiCheckboxField('Scans used', [DataRequired()],
                                     coerce=int)
