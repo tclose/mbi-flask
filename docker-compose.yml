@@ -1,0 +1,26 @@
+version: '3'
+services:
+  mbi-flask-web:
+    build: ./web
+    volumes:
+      - ./data:/data
+    expose:
+      - "5000"
+    depends_on:
+      - xnat-db
+  mbi-flask-backup:
+    build: ./backup
+    environment:
+      SETUP_CRON: "0 3 * * *"
+    volumes:
+      - ./data:/data
+      - ./backups:/backups
+  mbi-flask-nginx:
+    build: ./nginx
+    ports:
+     - "80:80"
+     - "443:443"
+    expose:
+     - "80"
+    links:
+      - mbi-flask-web
