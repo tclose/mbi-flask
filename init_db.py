@@ -4,12 +4,12 @@ import os.path as op
 import getpass
 import random
 import string
-from mbi_flask import db, app
+from app import db, app
 from datetime import datetime
-from mbi_flask.apps.reporting.models import (
+from app.reporting.models import (
     Subject, ImagingSession, ScanType, Report, session_scantype_assoc_table,
     report_scantype_assoc_table, user_role_assoc_table, User, Role)
-from mbi_flask.apps.reporting.constants import MRI
+from app.reporting.constants import MRI
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
 db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
