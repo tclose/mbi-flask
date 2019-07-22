@@ -2,6 +2,18 @@
 {% from "forms/macros.html" import render_field %}
 {% block sub_heading %}Report Submission{% endblock %}
 {% block content %}
+
+<script>
+    function toggletextbox() {
+        if (["1", "2"].includes(document.getElementById("conclusion").value)) {
+            console.log("here");
+            document.getElementById("findings").disabled = '';
+        } else {
+            console.log("here2");
+            document.getElementById("findings").disabled = 'true';
+        }
+    }
+</script>
 <table>
     <tr>
         <td><b>Study (imaging session) ID:</b></td>
@@ -30,9 +42,10 @@
 </table>
 <form method="POST" action="{{ url_for('reporting.report') }}" class="form">
     {{ form.csrf_token }}
-    {{ render_field(form.conclusion, class="input select") }}
+    {{ render_field(form.conclusion, class="input select",
+                    onChange="toggletextbox();") }}
     {{ render_field(form.findings, class="input text",
-                    rows=8, cols=80) }}
+                    rows=8, cols=80, disabled=True) }}
     {{ render_field(form.scan_types, class="input textarea") }}
     {{ form.session_id() }}
     <input type="submit" value="Submit report" class="button green">
