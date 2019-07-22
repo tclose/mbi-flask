@@ -16,7 +16,7 @@
 </script>
 <table>
     <tr>
-        <td><b>Study (imaging session) ID:</b></td>
+        <td><b>Study ID:</b></td>
         <td>{{ session.id }}</td>
     </tr>
     <tr>
@@ -29,7 +29,7 @@
     </tr>
     <tr>
         <td><b>XNAT ID:</b></td>
-        <td><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html">{{ session.xnat_id }}</a></td>
+        <td><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
     </tr>
     <tr>
         <td><b>Scan Date:</b></td>
