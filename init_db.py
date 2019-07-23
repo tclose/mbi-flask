@@ -34,6 +34,7 @@ if not app.config['TEST']:
     # Add administrator
     db.session.add(User('Administrator', '', 'manager.mbi@monash.edu',  # noqa pylint: disable=no-member
                     generate_password_hash(admin_password),
+                    signature=None,
                     roles=[admin_role], active=True))
 # Add dummy data to test with
 else:

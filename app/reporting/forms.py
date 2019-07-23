@@ -1,13 +1,14 @@
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField)
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
 from .constants import CONCLUSION, PATHOLOGIES
 
 
-class DivWidget(object):
+class DivWidget():
     """
     Renders a list of fields in separate <div> blocks
     """
@@ -39,12 +40,12 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = widgets.CheckboxInput()
 
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     email = StringField('Email address', [Required(), Email()])
     password = PasswordField('Password', [Required()])
 
 
-class RegisterForm(Form):
+class RegisterForm(FlaskForm):
     name = StringField(
         'Full name & title (e.g. Dr Jane E. Doe)',
         [Required()])
@@ -53,11 +54,12 @@ class RegisterForm(Form):
     password = PasswordField('Password', [Required()])
     confirm = PasswordField('Repeat password', [
         Required(),
-        EqualTo('password', message='Passwords must match')
-        ])
+        EqualTo('password', message='Passwords must match')])
+    signature = FileField("Signature in PNG format (Reporters only))",
+                          validators=[FileAllowed(['png'], 'PNG images only')])
 
 
-class ReportForm(Form):
+class ReportForm(FlaskForm):
 
     findings = TextAreaField('Findings')
     conclusion = SelectField(

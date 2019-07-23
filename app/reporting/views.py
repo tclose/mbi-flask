@@ -8,7 +8,9 @@ from flask import (
     redirect, url_for)
 from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
 from sqlalchemy import sql, orm
-from werkzeug import check_password_hash, generate_password_hash  # noqa pylint: disable=no-name-in-module
+from werkzeug import (  # noqa pylint: disable=no-name-in-module
+    check_password_hash, generate_password_hash,
+    secure_filename)
 import xnatutils
 from app import db, templates_dir, static_dir, app
 from .forms import RegisterForm, LoginForm, ReportForm
@@ -34,7 +36,26 @@ def before_request():
     """
     g.user = None
     if 'user_id' in session:
-        g.user = User.query.get(session['user_id'])
+        user = User.query.get(session['user_id'])
+        logout_msg = None
+        try:
+            last_activity = session['time_of_last_activity']
+        except (KeyError, ValueError):
+            logout_msg = (
+                "Could not read time of last activity, so logging out '{}'"
+                .format(user.name))
+        else:
+            if datetime.now() > (last_activity +
+                                 app.config['AUTO_LOGOUT_PERIOD']):
+                logout_msg = ("'{}' has been logged out due to inactivity"
+                              .format(user.name))
+        if logout_msg is not None:
+            session.pop('user_id', None)
+            session.pop('time_of_last_activity', None)
+            flash(logout_msg, "info")
+        else:
+            g.user = user
+            session['time_of_last_activity'] = datetime.now()
 
 
 @mod.route('/', methods=['GET'])
@@ -69,6 +90,7 @@ def login():
             # the session can't be modified as it's signed,
             # it's a safe place to store the user id
             session['user_id'] = user.id
+            session['time_of_last_activity'] = datetime.now()
             flash('Welcome {}'.format(user.name), 'success')
             return redirect(url_for('reporting.index'))
         flash('Wrong email or password', 'error')
@@ -94,12 +116,21 @@ def register():
     """
     form = RegisterForm(request.form)
     if form.validate_on_submit():
+        # Save signature file
+        if form.signature.data is not None:
+            form.signature.data.save(
+                op.join(app.config['SIGNATURE_UPLOADS_DIR'],
+                        secure_filename(form.email.data)) + '.png')
+            signature = True
+        else:
+            signature = False
         # create an user instance not yet stored in the database
         user = User(
             name=form.name.data,
             suffixes=form.suffixes.data,
             email=form.email.data,
-            password=generate_password_hash(form.password.data))
+            password=generate_password_hash(form.password.data),
+            signature=signature)
         # Insert the record in our database and commit it
         db.session.add(user)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member
