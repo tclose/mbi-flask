@@ -11,6 +11,7 @@ $icons-layout: diagonal;
 
 body {
     font-family: proxima-nova, "Helvetica Neue", Helvetica, Arial;
+    font-size: 14 px;
 }
 
 h1 {
@@ -36,15 +37,77 @@ div.hero-unit {
 
 }
 
+ul {
+  font-size: 14px;
+  vertical-align:middle;
+  list-style: none;
+}
+
 ul.errors {
-    color: #AA4444;
+  color: #AA4444;
+  list-style: circle;
 }
 
-[type="checkbox"]
-{
-    vertical-align:middle;
+div.form_field {
+  padding-top: 20px;
 }
 
+textarea {
+  width: 400px;
+  height: 150px;
+}
+
+.inline-field input,
+.inline-field label {
+  display: inline-block;
+  margin-bottom: 0; /* I added this after I posted my reply */
+  vertical-align: middle; /* Fixes any weird issues in Firefox and IE */
+  cursor: pointer;
+}
+
+div.form-checkbox {
+  padding-left: 10px;
+  padding-bottom: 20px;
+}
+
+label.form {
+  font-size: 14px;
+  //display: block;
+  margin-bottom: 5px;
+  font-weight: normal;
+  height: 20px;
+  color: $white;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+  background-color: #5a5a5a;
+  width: 60%;
+  border-radius: 5px;
+  padding-left: 5px;
+}
+
+table.report-table {
+  border-collapse: collapse;
+  border-spacing: 15px;
+  padding-bottom: 20px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 400px;
+  margin: 0 auto;
+  position: relative;
+  font-size: 14px;
+  color: #202020;
+}
+
+td.report-label {
+  font-weight: bold;
+}
+
+td.report-value {
+  padding-left: 20px;
+  font-weight: unset;
+}
 
 table.sessions {
   border-spacing: 1;
@@ -64,8 +127,8 @@ table.sessions td, table th {
   padding-left: 8px;
 }
 table.sessions thead tr {
-  height: 60px;
-  background: #363636;
+  height: 40px;
+  background: #424242;
 }
 table.sessions tbody tr {
   height: 50px;

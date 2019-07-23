@@ -14,39 +14,42 @@
         }
     }
 </script>
-<table>
-    <tr>
-        <td><b>Session (Study) ID:</b></td>
-        <td>{{ session.id }}</td>
-    </tr>
-    <tr>
-        <td><b>Subject ID:</b></td>
-        <td>{{ session.subject.mbi_id }}</td>
-    </tr>
-    <tr>
-        <td><b>Date of Birth:</b></td>
-        <td>{{ session.subject.dob.strftime('%d/%m/%Y') }}</td>
-    </tr>
-    <tr>
-        <td><b>XNAT ID:</b></td>
-        <td><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
-    </tr>
-    <tr>
-        <td><b>Scan Date:</b></td>
-        <td>{{ session.scan_date.strftime('%d/%m/%Y') }}</td>
-    </tr>
-    <tr>
-        <td><b>Priority:</b></td>
-        <td>{{ session.priority_str }}</td>
-    </tr>
+<label class="form">Session Details</label>
+<table class="report">
+    <tbody>
+        <tr>
+            <td class="report-label">Session (Study) ID:</td>
+            <td class="report-value">{{ session.id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Subject ID:</td>
+            <td class="report-value">{{ session.subject.mbi_id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Date of Birth:</td>
+            <td class="report-value">{{ session.subject.dob.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT ID:</td>
+            <td class="report-value"><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">Scan Date:</td>
+            <td class="report-value">{{ session.scan_date.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Priority:</td>
+            <td class="report-value">{{ session.priority_str }}</td>
+        </tr>
+    </tbody>
 </table>
 <form method="POST" action="{{ url_for('reporting.report') }}" class="form">
     {{ form.csrf_token }}
-    {{ render_field(form.conclusion, class="input select",
+    {{ render_field(form.conclusion, class="form-select",
                     onChange="toggletextbox();") }}
-    {{ render_field(form.findings, class="input text",
+    {{ render_field(form.findings, class="form-textarea",
                     rows=8, cols=80, disabled=True) }}
-    {{ render_field(form.scan_types, class="input textarea") }}
+    {{ render_field(form.scan_types, class="form-checkbox") }}
     {{ form.session_id() }}
     <input type="submit" value="Submit report" class="button green">
 </form>
