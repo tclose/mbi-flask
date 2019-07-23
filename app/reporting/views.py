@@ -15,7 +15,8 @@ from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType
 from .decorators import requires_login
 from .constants import (
-    REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE, NOT_RECORDED, MRI, PET)
+    REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE, NOT_RECORDED, MRI, PET,
+    PATHOLOGIES)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
@@ -205,7 +206,8 @@ def report():
         else:
             flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
-                           form=form, xnat_url=app.config['XNAT_URL'])
+                           form=form, xnat_url=app.config['XNAT_URL'],
+                           PATHOLOGIES=[str(c) for c in PATHOLOGIES])
 
 
 @mod.route('/import', methods=['GET'])

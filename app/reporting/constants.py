@@ -15,6 +15,8 @@ NONE = 0
 NONURGENT = 1
 CRITICAL = 2
 
+PATHOLOGIES = (NONURGENT, CRITICAL)
+
 CONCLUSION = {
     NONE: ("No pathology",
            ("No gross pathology that would require clinical follow up "

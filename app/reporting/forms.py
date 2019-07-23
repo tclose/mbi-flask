@@ -2,9 +2,9 @@ from flask_wtf import Form
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField)
-from wtforms.validators import DataRequired
-from wtforms.validators import Required, EqualTo, Email
-from .constants import CONCLUSION
+from wtforms.validators import (
+    DataRequired, ValidationError, Required, EqualTo, Email)
+from .constants import CONCLUSION, PATHOLOGIES
 
 
 class DivWidget(object):
@@ -59,12 +59,23 @@ class RegisterForm(Form):
 
 class ReportForm(Form):
 
-    findings = TextAreaField('Findings', [])
+    findings = TextAreaField('Findings')
     conclusion = SelectField(
         'Conclusion',
         choices=[(None, '')] + [(str(i), s)
                                 for i, (s, _) in CONCLUSION.items()])
-    scan_types = MultiCheckboxField('Scans used', [DataRequired()],
-                                    coerce=int)
+    scan_types = MultiCheckboxField(
+        'Scans used', [DataRequired("At least one scan must be selected")],
+        coerce=int)
     session_id = HiddenField('session_id')
     selected_only = HiddenField('selected_only', default=False)
+
+    def validate_findings(self, field):
+        try:
+            conclusion = int(self.conclusion.data)
+        except ValueError:
+            pass  # A conclusion hasn't been entered either
+        else:
+            if not self.findings.data and conclusion in PATHOLOGIES:
+                raise ValidationError("Findings must be entered if a "
+                                      "pathology is reported")

@@ -48,7 +48,7 @@
     {{ render_field(form.conclusion, class="form-select",
                     onChange="toggletextbox();") }}
     {{ render_field(form.findings, class="form-textarea",
-                    rows=8, cols=80, disabled=True) }}
+                    disabled=(form.conclusion.data not in PATHOLOGIES)) }}
     {{ render_field(form.scan_types, class="form-checkbox") }}
     {{ form.session_id() }}
     <input type="submit" value="Submit report" class="button green">
