@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import g, flash, redirect, url_for, request
-from mbi_flask import app
+from app import app
 
 
 def requires_login(role=None):
@@ -10,7 +10,7 @@ def requires_login(role=None):
             accepted = False
             if g.user is None:
                 flash('You need to be signed in to access that page.',
-                      'warning')
+                      'info')
             elif not g.user.active:
                 flash(("Your user account has been created but still needs " +
                        "to be activiated, please contact {} if this takes " +

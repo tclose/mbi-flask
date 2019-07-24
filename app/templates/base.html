@@ -33,6 +33,12 @@
             </div>
         </div>
     </div>
+    <div class="breadcrumb">
+        {%- for breadcrumb in breadcrumbs -%}
+        <a href="{{ breadcrumb.url }}">{{ breadcrumb.text }}</a>
+        {{ '/' if not loop.last }}
+        {%- endfor -%}
+    </div>
     <div class="container">
         <div id="header" class="row">
 

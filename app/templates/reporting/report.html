@@ -1,0 +1,57 @@
+{% extends "reporting/base.html" %}
+{% from "forms/macros.html" import render_field %}
+{% block sub_heading %}Report Submission{% endblock %}
+{% block content %}
+
+<script>
+    function toggletextbox() {
+        if (["1", "2"].includes(document.getElementById("conclusion").value)) {
+            console.log("here");
+            document.getElementById("findings").disabled = '';
+        } else {
+            console.log("here2");
+            document.getElementById("findings").disabled = 'true';
+        }
+    }
+</script>
+<label class="form">Session Details</label>
+<table class="report">
+    <tbody>
+        <tr>
+            <td class="report-label">Session (Study) ID:</td>
+            <td class="report-value">{{ session.id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Subject ID:</td>
+            <td class="report-value">{{ session.subject.mbi_id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Date of Birth:</td>
+            <td class="report-value">{{ session.subject.dob.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT ID:</td>
+            <td class="report-value"><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">Scan Date:</td>
+            <td class="report-value">{{ session.scan_date.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Priority:</td>
+            <td class="report-value">{{ session.priority_str }}</td>
+        </tr>
+    </tbody>
+</table>
+<form method="POST" action="{{ url_for('reporting.report') }}" class="form">
+    {{ form.csrf_token }}
+    {{ render_field(form.conclusion, class="form-select",
+                    onChange="toggletextbox();") }}
+    {{ render_field(form.findings, class="form-textarea",
+                    disabled=(form.conclusion.data not in PATHOLOGIES)) }}
+    {{ render_field(form.scan_types, class="form-checkbox") }}
+    {{ form.session_id() }}
+    <input type="submit" value="Submit report" class="button green">
+    &nbsp;&nbsp;<a href="{{ url_for('reporting.sessions') }}">Cancel</a>
+</form>
+{% endblock %}

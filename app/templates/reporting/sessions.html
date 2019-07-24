@@ -1,0 +1,44 @@
+{% extends "reporting/base.html" %}
+{% block sub_heading %}Sessions to Report{% endblock %}
+{% block content %}
+<script>
+    function report_on(session_id) {
+        report_form = document.forms['report_form']
+        report_form.session_id.value = session_id
+        report_form.selected_only.value = true
+        report_form.submit();
+    }
+</script>
+<form name="report_form" method="POST" action="{{ url_for('reporting.report') }}">
+    <input type="hidden" name="session_id">
+    <input type="hidden" name="selected_only">
+</form>
+<table class="sessions">
+    <thead>
+        <tr>
+            <th>Session (Study) ID</th>
+            <th>Scan Date</th>
+            <th>XNAT ID</th>
+            <th>Priority</th>
+        </tr>
+    </thead>
+    <tbody>
+{% for session in sessions %}
+    <tr onclick="report_on( {{ session.id }} );">
+        <td class="sessions-id">
+            {{ session.id }}
+        </td>
+        <td class="sessions-scandate">
+            {{ session.scan_date.strftime('%d/%m/%Y') }}
+        </td>
+        <td class="sessions-xnatid">
+            {{ session.xnat_id }}
+        </td>
+        <td class="sessions-priority-{{ session.priority_str.lower() }}">
+            {{ session.priority_str }}
+        </td>
+    </div>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

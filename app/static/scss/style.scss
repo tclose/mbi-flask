@@ -1,0 +1,209 @@
+@import url("http://fonts.googleapis.com/css?family=Marcellus");
+
+$icons-layout: diagonal;
+
+@import "icons/*.png";
+@include all-icons-sprites;
+
+@import "compass";
+@import "bootstrap/bootstrap";
+@import "bootstrap/responsive";
+
+body {
+    font-family: proxima-nova, "Helvetica Neue", Helvetica, Arial;
+    font-size: 14 px;
+}
+
+h1 {
+    font-family: "Marcellus";
+    color: darken($blueDark, 15%);
+    @include text-shadow(rgba(255,255,255,1) 0 1px 0);
+    small {
+    	font-family: "Helvetica";
+    }
+}
+
+div.hero-unit {
+    background: darken($purple, 15%) image-url('bg-hero.jpg') repeat;
+	color: $white;
+
+    img.hero-icon {
+    	border-right: 1px dashed #dedede; 
+    	margin-top: 5px; 
+    	margin-bottom: 5px; 
+    	margin-right: 10px; 
+    	padding-right:10px !important;
+    }
+
+}
+
+ul {
+  font-size: 14px;
+  vertical-align:middle;
+  list-style: none;
+}
+
+ul.errors {
+  color: #AA4444;
+  list-style: circle;
+}
+
+div.form_field {
+  padding-top: 20px;
+}
+
+textarea {
+  width: 400px;
+  height: 150px;
+}
+
+.inline-field input,
+.inline-field label {
+  display: inline-block;
+  margin-bottom: 0; /* I added this after I posted my reply */
+  vertical-align: middle; /* Fixes any weird issues in Firefox and IE */
+  cursor: pointer;
+}
+
+div.form-checkbox {
+  padding-left: 10px;
+  padding-bottom: 20px;
+}
+
+label.form {
+  font-size: 14px;
+  //display: block;
+  margin-bottom: 5px;
+  font-weight: normal;
+  height: 20px;
+  color: $white;
+  vertical-align: middle;
+  white-space: nowrap;
+  text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+  background-color: #5a5a5a;
+  width: 60%;
+  border-radius: 5px;
+  padding-left: 5px;
+}
+
+table.report-table {
+  border-collapse: collapse;
+  border-spacing: 15px;
+  padding-bottom: 20px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 400px;
+  margin: 0 auto;
+  position: relative;
+  font-size: 14px;
+  color: #202020;
+}
+
+td.report-label {
+  font-weight: bold;
+}
+
+td.report-value {
+  padding-left: 20px;
+  font-weight: unset;
+}
+
+table.sessions {
+  border-spacing: 1;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+table.sessions * {
+  position: relative;
+}
+table.sessions td, table th {
+  padding-left: 8px;
+}
+table.sessions thead tr {
+  height: 40px;
+  background: #424242;
+}
+table.sessions tbody tr {
+  height: 50px;
+}
+table.sessions tbody tr:last-child {
+  border: 0;
+}
+table.sessions td, table th {
+  text-align: left;
+}
+table.sessions td.l, table th.l {
+  text-align: right;
+}
+table.sessions td.c, table th.c {
+  text-align: center;
+}
+table.sessions td.r, table th.r {
+  text-align: center;
+}
+
+table.sessions th{
+  font-size: 14px;
+  color: #fff;
+  line-height: 1.2;
+  font-weight: unset;
+}
+
+table.sessions tbody tr:nth-child(even) {
+  background-color: #f5f5f5;
+}
+
+table.sessions tbody tr {
+  font-size: 14px;
+  color: #404040;
+  line-height: 1.2;
+  font-weight: unset;
+}
+
+table.sessions tbody tr:hover {
+  color: #202020;
+  background-color: #e0e0e0;
+  cursor: pointer;
+}
+
+td.sessions-id {
+  width: 160px;
+  padding-left: 10px;
+}
+
+td.sessions-scandate {
+  width: 160px;
+}
+
+td.sessions-xnatid {
+  width: 300px;
+}
+
+td.sessions-priority-low {
+  width: 100px;
+  text-align: right;
+  padding-right: 10px;
+}
+
+td.sessions-priority-high {
+  width: 50px;
+  text-align: right;
+  color: rgb(204, 124, 20);
+  font-weight: bold;
+  padding-right: 10px;
+}
+
+td.sessions-priority-urgent {
+  width: 50px;
+  text-align: right;
+  color: rgb(204, 32, 20);
+  font-weight: bold;
+  padding-right: 10px;
+}
