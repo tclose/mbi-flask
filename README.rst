@@ -17,6 +17,12 @@ file. This is best done using `pip3`::
 
     $ pip3 install -r requirements.txt
 
+You will also need to compile the CSS from the Sass sources by::
+
+    $ sudo apt install ruby-compass
+    $ sudo gem install compas-colors
+    $ pushd app/static/scss; compass compile; popd
+
 You can deploy the app using a number of `options <https://flask.palletsprojects.com/en/1.1.x/deploying/>`_,
 the easiest of which is using `gunicorn`::
 
