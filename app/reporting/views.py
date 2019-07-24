@@ -136,10 +136,21 @@ def register():
         db.session.add(user)  # pylint: disable=no-member
         try:
             db.session.commit()  # pylint: disable=no-member
-        except IntegrityError:
-            flash("The email address '{}' has already been registered, please "
-                  "try logging in or contact {} to reset"
-                  .format(form.email.data, app.config['ADMIN_EMAIL']), 'error')
+        except IntegrityError as e:
+            clash_field = re.match(
+                r'.*UNIQUE constraint failed: reporting_user.(.*)',
+                e.args[0]).group(1)
+            if clash_field == 'email':
+                msg = ("The email address '{}' has already been registered"
+                       .format(form.email.data))
+            elif clash_field == 'name':
+                msg = ("The name '{}' has already been registered with the "
+                       "email '{}'".format(form.name.data, form.email.data))
+            else:
+                raise Exception("Unrecognised clash_field, {}"
+                                .format(clash_field))
+            flash("{}. Please try logging in or contact {} to reset."
+                  .format(msg, app.config['ADMIN_EMAIL']), 'error')
         else:
             # flash will display a message to the user
             flash('Thanks for registering, please wait to be activated. '
