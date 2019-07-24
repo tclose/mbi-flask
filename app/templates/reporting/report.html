@@ -26,10 +26,6 @@
             <td class="report-value">{{ session.subject.mbi_id }}</td>
         </tr>
         <tr>
-            <td class="report-label">Date of Birth:</td>
-            <td class="report-value">{{ session.subject.dob.strftime('%d/%m/%Y') }}</td>
-        </tr>
-        <tr>
             <td class="report-label">XNAT ID:</td>
             <td class="report-value"><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
         </tr>

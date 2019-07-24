@@ -1,6 +1,6 @@
 import os.path as op
 from datetime import datetime
-from app import db, app
+from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
 from .constants import (
     SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW)
@@ -22,7 +22,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
     active = db.Column(db.Boolean())  # noqa pylint: disable=no-member
-    signature = db.Column(db.Boolean())  # pylint: disable=no-member
+    signature = db.Column(db.String(200))  # pylint: disable=no-member
 
     # Relationships
     reports = db.relationship('Report', back_populates='reporter')  # noqa pylint: disable=no-member
@@ -30,7 +30,7 @@ class User(db.Model):
                             secondary='reporting_user_role_assoc')
 
     def __init__(self, name, suffixes, email, password, signature=None,
-                 roles=(), active=False):
+                 roles=[], active=False):
         self.name = name
         self.suffixes = suffixes
         self.email = email
@@ -54,8 +54,7 @@ class User(db.Model):
         if not self.signature:
             raise Exception("A signature has not been uploaded for '{}'"
                             .format(self.name))
-        return op.join(app.config['SIGNATURE_UPLOADS_DIR'],
-                       secure_filename(form.email.data)) + '.png'
+        return signature_images.path(self.signature)
 
 
 class Role(db.Model):
@@ -69,7 +68,8 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
 
-    def __init__(self, name):
+    def __init__(self, id, name):
+        self.id = id
         self.name = name
 
 
