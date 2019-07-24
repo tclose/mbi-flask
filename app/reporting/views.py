@@ -66,9 +66,9 @@ def before_request():
 def index():
     # This should be edited to be a single jumping off page instead of
     # redirects
-    if g.user.has_role('reporter'):
+    if g.user.has_role('Reporter'):
         return redirect(url_for('reporting.sessions'))
-    elif g.user.has_role('admin'):
+    elif g.user.has_role('Administrator'):
         return redirect(url_for('reporting.admin'))
     else:
         raise Exception(
