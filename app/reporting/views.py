@@ -19,7 +19,7 @@ from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
-    REPORT_INTERVAL, LOW, IGNORE, ALFRED_START_DATE, NOT_RECORDED, MRI, PET,
+    REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
     PATHOLOGIES)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
@@ -339,9 +339,6 @@ def import_():
                         avail_scan_types.append(scan_type)
                     xnat_uri = exp.uri.split('/')[-1]
                     scan_date = datetime.strptime(row['ScanDate'], '%d/%m/%Y')
-                    # if scan_date < ALFRED_START_DATE:
-                    #     priority = IGNORE
-                    # else:
                     priority = LOW
                     session = ImagingSession(study_id, subject,
                                              xnat_id,
