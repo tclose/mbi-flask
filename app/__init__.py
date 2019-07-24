@@ -3,7 +3,8 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_breadcrumbs import Breadcrumbs
 from flask_mail import Mail
-from flask_uploads import UploadSet, configure_uploads, patch_request_class
+from flask_uploads import (
+    UploadSet, configure_uploads, patch_request_class)
 
 templates_dir = op.join(op.dirname(__file__), 'templates')
 static_dir = op.join(op.dirname(__file__), 'static')
@@ -18,7 +19,7 @@ Breadcrumbs(app)
 mail = Mail(app)
 
 
-signature_images = UploadSet('signature', ['png'])
+signature_images = UploadSet('signature', 'jpg jpeg png gif'.split())
 configure_uploads(app, signature_images)
 patch_request_class(app)
 

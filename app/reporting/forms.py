@@ -61,7 +61,8 @@ class RegisterForm(FlaskForm):
                                (ADMIN_ROLE, 'Administrator')])
     signature = FileField(
         "Electronic signature in PNG format (Reporters only)",
-        validators=[FileAllowed(signature_images, 'PNG images only')])
+        validators=[FileAllowed(signature_images,
+                                'JPEG, PNG and GIF images only')])
 
     def validate_signature(self, field):
         if self.role.data == REPORTER_ROLE and field.data is None:

@@ -46,8 +46,16 @@ class User(db.Model):
     def __repr__(self):
         return '<User {}>'.format(self.name)
 
-    def has_role(self, role):
-        return role in [r.name for r in self.roles]
+    def has_role(self, role_id):
+        """
+        Checks whether the user has the required role
+        
+        Parameters
+        ----------
+        role_id : int
+            The ID of the required role (i.e. ADMIN_ROLE or REPORTER_ROLE)
+        """
+        return role_id in [r.id for r in self.roles]
 
     @property
     def signature_path(self):

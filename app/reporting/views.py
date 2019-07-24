@@ -14,13 +14,13 @@ from werkzeug import (  # noqa pylint: disable=no-name-in-module
     check_password_hash, generate_password_hash,
     secure_filename)
 import xnatutils
-from app import db, templates_dir, static_dir, app, signature_images
+from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
     REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
-    PATHOLOGIES)
+    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
@@ -66,9 +66,9 @@ def before_request():
 def index():
     # This should be edited to be a single jumping off page instead of
     # redirects
-    if g.user.has_role('Reporter'):
+    if g.user.has_role(REPORTER_ROLE):
         return redirect(url_for('reporting.sessions'))
-    elif g.user.has_role('Administrator'):
+    elif g.user.has_role(ADMIN_ROLE):
         return redirect(url_for('reporting.admin'))
     else:
         raise Exception(
@@ -148,15 +148,16 @@ def register():
             msg = Message("New reporting registration: {}"
                           .format(form.email.data),
                           recipients=[app.config['ADMIN_EMAIL']])
-            msg.html = render_template('reporting/email/registration',
+            msg.html = render_template('reporting/email/registration.html',
                                        email=form.email.data)
+            mail.send(msg)
             return redirect(url_for('reporting.login'))
     return render_template("reporting/register.html", form=form)
 
 
 @mod.route('/sessions', methods=['GET'])
 @register_breadcrumb(mod, '.sessions', 'Sessions to report')
-@requires_login('reporter')
+@requires_login(REPORTER_ROLE)
 def sessions():
     """
     Display all sessions that still need to be reported.
@@ -199,7 +200,7 @@ def sessions():
 
 @mod.route('/report', methods=['GET', 'POST'])
 @register_breadcrumb(mod, '.sessions.report', 'Report submission')
-@requires_login('reporter')
+@requires_login(REPORTER_ROLE)
 def report():
     """
     Enter report
@@ -251,7 +252,7 @@ def report():
 
 
 @mod.route('/import', methods=['GET'])
-@requires_login('admin')
+@requires_login(ADMIN_ROLE)
 def import_():
     export_file = app.config['FILEMAKER_EXPORT_FILE']
     if not op.exists(export_file):

@@ -17,7 +17,11 @@ else:
 
 SECRET_KEY = 'ARandomStringOfCharacters'
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + op.join(PKG_ROOT, DB_NAME)
+
+os.makedirs(op.join(PKG_ROOT, 'databases'), exist_ok=True)
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + op.join(
+    PKG_ROOT, 'databases', DB_NAME)
 
 WTF_CSRF_ENABLED = True
 WTF_CSRF_SECRET_KEY = "AnotherRandomStringOfCharacters"
@@ -34,10 +38,10 @@ UPLOADED_SIGNATURE_DEST = op.join(PKG_ROOT, 'uploads', 'signatures')
 
 os.makedirs(UPLOADED_SIGNATURE_DEST, exist_ok=True)
 
-MAIL_SERVER = 'localhost'
-MAIL_PORT = 25
-MAIL_USE_TLS = False
-MAIL_USE_SSL = False
-MAIL_USERNAME = None
-MAIL_PASSWORD = None
+
+MAIL_SERVER = 'smtp.gmail.com'
+MAIL_PORT = 465
+MAIL_USE_SSL = True
+MAIL_USERNAME = ADMIN_EMAIL
+MAIL_PASSWORD = 'admin-email-password'
 MAIL_DEFAULT_SENDER = ADMIN_EMAIL
