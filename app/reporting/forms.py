@@ -1,11 +1,11 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
-    SelectField, HiddenField, TextAreaField)
+    SelectField, HiddenField, TextAreaField, RadioField)
 from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
-from .constants import CONCLUSION, PATHOLOGIES
+from .constants import CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE
 from app import signature_images
 
 
@@ -56,9 +56,17 @@ class RegisterForm(FlaskForm):
     confirm = PasswordField('Repeat password', [
         Required(),
         EqualTo('password', message='Passwords must match')])
-    signature = FileField("Signature in PNG format (Reporters only)",
-                          validators=[FileAllowed(signature_images,
-                                                  'PNG images only')])
+    role = RadioField('Requested role', [Required()], coerce=int,
+                      choices=[(REPORTER_ROLE, 'Reporter'),
+                               (ADMIN_ROLE, 'Administrator')])
+    signature = FileField(
+        "Electronic signature in PNG format (Reporters only)",
+        validators=[FileAllowed(signature_images, 'PNG images only')])
+
+    def validate_signature(self, field):
+        if self.role.data == REPORTER_ROLE and field.data is None:
+            raise ValidationError("An electronic signature must be provided "
+                                  "for reporter accounts")
 
 
 class ReportForm(FlaskForm):

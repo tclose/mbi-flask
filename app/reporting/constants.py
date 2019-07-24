@@ -57,3 +57,7 @@ MODALITIES = {
     MRI: "MRI",
     PET: "PET"
 }
+
+# User roles
+ADMIN_ROLE = 0
+REPORTER_ROLE = 1

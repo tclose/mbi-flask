@@ -68,7 +68,8 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
 
-    def __init__(self, name):
+    def __init__(self, id, name):
+        self.id = id
         self.name = name
 
 

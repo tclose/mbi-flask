@@ -2,6 +2,7 @@ import os.path as op
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_breadcrumbs import Breadcrumbs
+from flask_mail import Mail
 from flask_uploads import UploadSet, configure_uploads, patch_request_class
 
 templates_dir = op.join(op.dirname(__file__), 'templates')
@@ -13,6 +14,8 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 
 Breadcrumbs(app)
+
+mail = Mail(app)
 
 
 signature_images = UploadSet('signature', ['png'])

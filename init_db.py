@@ -9,7 +9,7 @@ from datetime import datetime
 from app.reporting.models import (
     Subject, ImagingSession, ScanType, Report, session_scantype_assoc_table,
     report_scantype_assoc_table, user_role_assoc_table, User, Role)
-from app.reporting.constants import MRI
+from app.reporting.constants import MRI, ADMIN_ROLE, REPORTER_ROLE
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
 db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
@@ -22,8 +22,8 @@ if op.exists(db_path):
 
 db.create_all()
 
-admin_role = Role('admin')
-reporter_role = Role('reporter')
+admin_role = Role(ADMIN_ROLE, 'Administrator')
+reporter_role = Role(REPORTER_ROLE, 'Reporter')
 
 db.session.add(admin_role)  # noqa pylint: disable=no-member
 db.session.add(reporter_role)  # noqa pylint: disable=no-member
