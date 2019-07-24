@@ -23,8 +23,13 @@ You will also need to compile the CSS from the Sass sources by::
     $ sudo gem install compas-colors
     $ pushd app/static/scss; compass compile; popd
 
+Now you can initialise the database by running `init_db.py`::
+
+    $ python3 init_db.py
+
 You can deploy the app using a number of `options <https://flask.palletsprojects.com/en/1.1.x/deploying/>`_,
 the easiest of which is using `gunicorn`::
 
     $ sudo apt install gunicorn
     $ gunicorn -w 4 app:app
+
