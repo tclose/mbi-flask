@@ -8,7 +8,8 @@ __pycache__
 /config.py
 /reports_status.csv
 /reports_status-reduced.csv
-/app.db-journal
+*.db-journal
 /app/static/scss/.sass-cache
 /uploads
 .DS_Store
+/test.db
