@@ -12,7 +12,7 @@ from werkzeug import (  # noqa pylint: disable=no-name-in-module
     check_password_hash, generate_password_hash,
     secure_filename)
 import xnatutils
-from app import db, templates_dir, static_dir, app
+from app import db, templates_dir, static_dir, app, signature_images
 from .forms import RegisterForm, LoginForm, ReportForm
 from .models import Subject, ImagingSession, User, Report, ScanType
 from .decorators import requires_login
@@ -104,7 +104,7 @@ def logout():
     """
     user = g.user
     g.user = None
-    del session['user_id']
+    session.pop('user_id', None)
     flash('Logged out {}'.format(user.name), 'info')
     return redirect(url_for('reporting.login'))
 
@@ -114,23 +114,21 @@ def register():
     """
     Registration Form
     """
-    form = RegisterForm(request.form)
+    form = RegisterForm()
     if form.validate_on_submit():
         # Save signature file
         if form.signature.data is not None:
-            form.signature.data.save(
-                op.join(app.config['SIGNATURE_UPLOADS_DIR'],
-                        secure_filename(form.email.data)) + '.png')
-            signature = True
+            signature_fname = signature_images.save(form.signature.data,
+                                                    name=form.email.data + '.')
         else:
-            signature = False
+            signature_fname = None
         # create an user instance not yet stored in the database
         user = User(
             name=form.name.data,
             suffixes=form.suffixes.data,
             email=form.email.data,
             password=generate_password_hash(form.password.data),
-            signature=signature)
+            signature=signature_fname)
         # Insert the record in our database and commit it
         db.session.add(user)  # pylint: disable=no-member
         db.session.commit()  # pylint: disable=no-member

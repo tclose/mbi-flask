@@ -10,4 +10,4 @@ reports_status.csv
 reports_status-reduced.csv
 app.db-journal
 app/static/scss/.sass-cache
-
+/uploads

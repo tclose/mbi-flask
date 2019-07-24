@@ -2,10 +2,11 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField)
-from flask_wtf.file import FileField, FileRequired, FileAllowed
+from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
 from .constants import CONCLUSION, PATHOLOGIES
+from app import signature_images
 
 
 class DivWidget():
@@ -55,8 +56,9 @@ class RegisterForm(FlaskForm):
     confirm = PasswordField('Repeat password', [
         Required(),
         EqualTo('password', message='Passwords must match')])
-    signature = FileField("Signature in PNG format (Reporters only))",
-                          validators=[FileAllowed(['png'], 'PNG images only')])
+    signature = FileField("Signature in PNG format (Reporters only)",
+                          validators=[FileAllowed(signature_images,
+                                                  'PNG images only')])
 
 
 class ReportForm(FlaskForm):

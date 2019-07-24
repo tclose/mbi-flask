@@ -13,8 +13,7 @@ def requires_login(role=None):
                       'info')
             elif not g.user.active:
                 flash(("Your user account has been created but still needs " +
-                       "to be activiated, please contact {} if this takes " +
-                       "more two working days").format(
+                       "to be activiated, please contact {}").format(
                            app.config['ADMIN_EMAIL']),
                       'warning')
             elif not g.user.roles:
