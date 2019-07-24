@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+import os
 from datetime import datetime
 import os.path as op
 
@@ -19,4 +21,17 @@ ADMIN_EMAIL = 'mbi-informatics@monash.edu'
 FILEMAKER_EXPORT_FILE = op.join(
     op.abspath(op.dirname(__file__)), 'reports_status.csv')
 
-ALFRED_START_DATE = datetime(2019, 7, 2)
+AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
+
+UPLOADED_SIGNATURE_DEST = op.join(
+    op.abspath(op.dirname(__file__)), 'uploads', 'signatures')
+
+os.makedirs(UPLOADED_SIGNATURE_DEST, exist_ok=True)
+
+MAIL_SERVER = 'localhost'
+MAIL_PORT = 25
+MAIL_USE_TLS = False
+MAIL_USE_SSL = False
+MAIL_USERNAME = None
+MAIL_PASSWORD = None
+MAIL_DEFAULT_SENDER = ADMIN_EMAIL
