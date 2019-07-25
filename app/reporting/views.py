@@ -104,10 +104,11 @@ def logout():
     """
     Logout page
     """
-    user = g.user
-    g.user = None
+    if g.user is not None:
+        user = g.user
+        g.user = None
+        flash('Logged out {}'.format(user.name), 'info')
     session.pop('user_id', None)
-    flash('Logged out {}'.format(user.name), 'info')
     return redirect(url_for('reporting.login'))
 
 
