@@ -131,7 +131,8 @@ def register():
             email=form.email.data,
             password=generate_password_hash(form.password.data),
             signature=signature_fname,
-            roles=[Role.query.get(form.role.data)])
+            roles=[Role.query.get(form.role.data)],
+            active=app.config['TEST'])
         # Insert the record in our database and commit it
         db.session.add(user)  # pylint: disable=no-member
         try:
