@@ -154,9 +154,11 @@ def register():
                   .format(msg, app.config['ADMIN_EMAIL']), 'error')
         else:
             # flash will display a message to the user
-            flash('Thanks for registering, please wait to be activated. '
-                  'If urgent contact {}'.format(app.config['ADMIN_EMAIL']),
-                  'success')
+            msg = "Registration successful"
+            if not user.active:
+                msg += (", please wait to be activated. If urgent contact {}"
+                        .format(app.config['ADMIN_EMAIL']))
+            flash(msg, 'success')
             msg = Message("New reporting registration: {}"
                           .format(form.email.data),
                           recipients=[app.config['ADMIN_EMAIL']])
