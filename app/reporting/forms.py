@@ -60,7 +60,7 @@ class RegisterForm(FlaskForm):
                       choices=[(REPORTER_ROLE, 'Reporter'),
                                (ADMIN_ROLE, 'Administrator')])
     signature = FileField(
-        "Electronic signature in PNG format (Reporters only)",
+        "Electronic signature image (Reporters only)",
         validators=[FileAllowed(signature_images,
                                 'JPEG, PNG and GIF images only')])
 
