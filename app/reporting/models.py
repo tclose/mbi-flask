@@ -49,7 +49,7 @@ class User(db.Model):
     def has_role(self, role_id):
         """
         Checks whether the user has the required role
-        
+
         Parameters
         ----------
         role_id : int
@@ -124,6 +124,7 @@ class ImagingSession(db.Model):
     xnat_uri = db.Column(db.String(200))  # noqa pylint: disable=no-member
     scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
+    data_status = db.Column(db.Integer)  # pylint: disable=no-member
 
     # Relationships
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
@@ -133,13 +134,14 @@ class ImagingSession(db.Model):
         secondary='reporting_session_scantype_assoc')
 
     def __init__(self, id, subject, xnat_id, xnat_uri, scan_date,
-                 avail_scan_types, priority=LOW):
+                 avail_scan_types, data_status, priority=LOW):
         self.id = id
         self.subject = subject
         self.xnat_id = xnat_id
         self.xnat_uri = xnat_uri
         self.scan_date = scan_date
         self.avail_scan_types = avail_scan_types
+        self.data_status = data_status
         self.priority = priority
 
     def __repr__(self):
@@ -200,10 +202,12 @@ class ScanType(db.Model):
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     name = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
+    clinical = db.Column(db.Boolean)  # pylint: disable=no-member
     alias = db.Column(db.Integer)  # pylint: disable=no-member
 
-    def __init__(self, name, alias=None):
+    def __init__(self, name, clinical, alias=None):
         self.name = name
+        self.clinical = clinical
         self.alias = alias
 
     def __repr__(self):

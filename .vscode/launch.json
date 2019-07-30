@@ -29,11 +29,18 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Python: Import",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_import.py",
+            "console": "internalConsole"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "internalConsole"
         }     
     ]
 }

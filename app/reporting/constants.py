@@ -58,3 +58,12 @@ MODALITIES = {
 # User roles
 ADMIN_ROLE = 1
 REPORTER_ROLE = 2
+
+# Session data statuses
+EXPORTED = 0  # Clinically relevant scans have been exported to Alfred XNAT
+PRESENT = 1  # Found matching session on MBI XNAT
+NOT_FOUND = 2  # Did not find matching session on MBI-XNAT
+NOT_SCANNED = 3  # This session was never scanned
+INVALID_LABEL = 4  # The subject/visit labels need to be edited for this sess.
+NOT_REQUIRED = 5  # The data is no longer required (already reported)
+UNIMELB_DARIS = 6  # The data was stored on Unimelb daris, no longer accessible

@@ -1,6 +1,7 @@
 import sys
 import os
 import os.path as op
+from argparse import ArgumentParser
 import getpass
 import random
 import string
@@ -11,6 +12,11 @@ from app.reporting.models import (
     report_scantype_assoc_table, user_role_assoc_table, User, Role)
 from app.reporting.constants import MRI, ADMIN_ROLE, REPORTER_ROLE
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
+
+parser = ArgumentParser("Initialise DB for Flask app")
+parser.add_argument('--password', '-p', default=None,
+                    help="The password for the admin account")
+args = parser.parse_args()
 
 db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
 if op.exists(db_path):
@@ -29,8 +35,12 @@ db.session.add(admin_role)  # noqa pylint: disable=no-member
 db.session.add(reporter_role)  # noqa pylint: disable=no-member
 
 if not app.config['TEST']:
-    admin_password = getpass.getpass(
-        "Please enter password for admin account ('manager.mbi@monash.edu'): ")
+    if args.password is None:
+        admin_password = getpass.getpass(
+            "Please enter password for admin account "
+            "('manager.mbi@monash.edu'): ")
+    else:
+        admin_password = args.password
     # Add administrator
     db.session.add(User('Administrator', '', 'manager.mbi@monash.edu',  # noqa pylint: disable=no-member
                     generate_password_hash(admin_password),
