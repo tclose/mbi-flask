@@ -273,7 +273,7 @@ def report():
         else:
             flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
-                           form=form, xnat_url=app.config['XNAT_URL'],
+                           form=form, xnat_url=app.config['TARGET_XNAT_URL'],
                            PATHOLOGIES=[str(c) for c in PATHOLOGIES])
 
 
@@ -292,7 +292,7 @@ def import_():
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
     axis = User.query.filter_by(name='AXIS Reporting').one()
-    with xnatutils.connect(server=app.config['XNAT_URL']) as alfred_xnat:
+    with xnatutils.connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
         with open(export_file) as f:
             rows = list(csv.DictReader(f))
             for row in tqdm(rows):
@@ -345,7 +345,7 @@ def import_():
                     except ValueError:
                         scan_date = datetime(1, 1, 1)
                         print("Could not read scan date for {}"
-                                .format(study_id))
+                              .format(study_id))
                     # Extract subject and visit ID from DARIS ID or explicit
                     # fields
                     if row['DarisID']:
@@ -405,7 +405,7 @@ def import_():
                         avail_scan_types = []
                     elif data_status not in (INVALID_LABEL, UNIMELB_DARIS):
                         try:
-                            exp = alfred_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
+                            exp = mbi_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
                         except KeyError:
                             xnat_uri = ''
                             data_status = NOT_FOUND
@@ -419,14 +419,15 @@ def import_():
                                     except orm.exc.NoResultFound:
                                         scan_type = ScanType(
                                             scan.type,
-                                            clinical=any(r.match(scan.type)
-                                                        for r in clinical_res))
+                                            clinical=any(
+                                                r.match(scan.type)
+                                                for r in clinical_res))
                                         db.session.add(scan_type)  # noqa pylint: disable=no-member
                                     avail_scan_types.append(scan_type)
                             except XNATResponseError as e:
                                 raise Exception(
                                     "Problem reading scans of {} ({}):\n{}"
-                                    .format(study_id, xnat_id, str(e)))    
+                                    .format(study_id, xnat_id, str(e)))
                             xnat_uri = exp.uri.split('/')[-1]
                     else:
                         xnat_uri = ''

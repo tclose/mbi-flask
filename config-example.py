@@ -26,8 +26,8 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///' + op.join(
 WTF_CSRF_ENABLED = True
 WTF_CSRF_SECRET_KEY = "AnotherRandomStringOfCharacters"
 
-
-XNAT_URL = 'https://172.22.2.13/xnat'
+SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
+TARGET_XNAT_URL = 'https://172.22.2.13/xnat'
 ADMIN_EMAIL = 'mbi-informatics@monash.edu'
 
 FILEMAKER_EXPORT_FILE = op.join(PKG_ROOT, 'reports_status.csv')
