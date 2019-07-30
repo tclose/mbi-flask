@@ -284,8 +284,8 @@ def import_():
     if not op.exists(export_file):
         raise Exception("Could not find an FileMaker export file at {}"
                         .format(export_file))
-    num_imported = 0
-    num_prev = 0
+    imported = []
+    previous = []
     skipped = []
     # Get previous reporters
     nick_ferris = User.query.filter_by(
@@ -324,7 +324,7 @@ def import_():
                            if row['DOB'] is not None else datetime(1, 1, 1))
                 except ValueError:
                     raise Exception(
-                        "Could not process date of birth of {} ({})"
+                        "Could not parse date of birth of {} ({})"
                         .format(study_id, row['DOB']))
                 # Check to see if subject is present in database already
                 # otherwise add them
@@ -343,9 +343,8 @@ def import_():
                         scan_date = datetime.strptime(
                             row['ScanDate'].replace('.', '/'), '%d/%m/%Y')
                     except ValueError:
-                        scan_date = datetime(1, 1, 1)
-                        print("Could not read scan date for {}"
-                              .format(study_id))
+                        raise Exception("Could not parse scan date for {} ({})"
+                                        .format(study_id, row['ScanDate']))
                     # Extract subject and visit ID from DARIS ID or explicit
                     # fields
                     if row['DarisID']:
@@ -453,13 +452,9 @@ def import_():
                             session.id, paul_beech.id, '', NOT_RECORDED,
                             [], PET, date=scan_date, dummy=True))  # noqa pylint: disable=no-member
                     db.session.commit()  # pylint: disable=no-member
-                    num_imported += 1
+                    imported.append(study_id)
                 else:
-                    num_prev += 1
-    return {'num_imported': num_imported,
-            'num_prev': num_prev,
-            'skipped': skipped}
-    # return render_template('reporting/import.html',
-    #                        num_imported=num_imported, num_prev=num_prev,
-    #                        malformed=malformed, no_xnat=no_xnat,
-    #                        skipped=skipped)
+                    previous.append(study_id)
+    return 200, {'imported': imported,
+                 'previous': previous,
+                 'skipped': skipped}
