@@ -2,8 +2,9 @@ import os.path as op
 from datetime import datetime
 from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import sql, orm
 from .constants import (
-    SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW)
+    REPORT_INTERVAL, SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, IGNORE)
 
 Base = declarative_base()
 
@@ -150,6 +151,42 @@ class ImagingSession(db.Model):
     @property
     def priority_str(self):
         return SESSION_PRIORITY[self.priority]
+
+    @classmethod
+    def require_report(cls):
+        """
+        Returns a query that selects all imaging sessions that still need to be
+        reported
+        """
+        # Create an alias of the ImagingSession model so we can search within
+        # its table for more recent sessions and earlier sessions that have
+        # been reported
+        S = orm.aliased(ImagingSession)
+
+        # Create query for sessions that still need to be reported
+        require_report = (
+            db.session.query(ImagingSession)  # pylint: disable=no-member
+            # Filter out "ignored" sessions that are to be reported by AXIS
+            .filter(ImagingSession.priority != IGNORE)
+            # Filter out sessions of subjects that have a more recent session
+            .filter(~(
+                db.session.query(S)  # pylint: disable=no-member
+                .filter(
+                    S.subject_id == ImagingSession.subject_id,
+                    S.scan_date > ImagingSession.scan_date)
+                .exists()))
+            # Filter out sessions of subjects that have been reported on less
+            # than the REPORT_INTERVAL (e.g. 365 days) beforehand
+            .filter(~(
+                db.session.query(S)  # pylint: disable=no-member
+                .join(Report)  # Only select sessions with a report
+                .filter(
+                    S.subject_id == ImagingSession.subject_id,
+                    sql.func.abs(
+                        sql.func.julianday(ImagingSession.scan_date) -
+                        sql.func.julianday(S.scan_date)) <= REPORT_INTERVAL)
+                .exists())))
+        return require_report
 
 
 class Report(db.Model):

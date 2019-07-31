@@ -65,5 +65,17 @@ PRESENT = 1  # Found matching session on MBI XNAT
 NOT_FOUND = 2  # Did not find matching session on MBI-XNAT
 NOT_SCANNED = 3  # This session was never scanned
 INVALID_LABEL = 4  # The subject/visit labels need to be edited for this sess.
-NOT_REQUIRED = 5  # The data is no longer required (already reported)
+NOT_CHECKED = 5  # The data was not checked as it was already reported
 UNIMELB_DARIS = 6  # The data was stored on Unimelb daris, no longer accessible
+EXCLUDED = 7  # An executive decision was made to exclude this session
+
+DATA_STATUS = {
+    EXPORTED: "Exported to Alfred",
+    PRESENT: "Present in XNAT",
+    NOT_FOUND: "Not found on XNAT",
+    NOT_SCANNED: "Not scanned",
+    INVALID_LABEL: "Invalid labels in DB",
+    NOT_CHECKED: "Already reported so not checked",
+    UNIMELB_DARIS: "Stored in UniMelb DaRIS",
+    EXCLUDED: "Manually excluded by executive"
+}

@@ -21,8 +21,8 @@ from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
     REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
-    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
-    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_REQUIRED)
+    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE, DATA_STATUS, EXPORTED,
+    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
 
@@ -80,7 +80,7 @@ def index():
     if g.user.has_role(REPORTER_ROLE):
         return redirect(url_for('reporting.sessions'))
     elif g.user.has_role(ADMIN_ROLE):
-        return redirect(url_for('reporting.admin'))
+        return redirect(url_for('reporting.fix_sessions'))
     else:
         raise Exception(
             "Unrecognised role for user {} ({})".format(
@@ -189,39 +189,17 @@ def sessions():
     Display all sessions that still need to be reported.
     """
 
-    # Create an alias of the ImagingSession model so we can search within its
-    # table for more recent sessions and earlier sessions that have been
-    # reported
-    S = orm.aliased(ImagingSession)
-
     # Create query for sessions that still need to be reported
     to_report = (
-        db.session.query(S)  # pylint: disable=no-member
-        # Filter out "ignored" sessions that are to be reported by AXIS
-        .filter(S.priority != IGNORE)
-        # Filter out sessions of subjects that have a more recent session
-        .filter(~(
-            db.session.query(ImagingSession)  # pylint: disable=no-member
-            .filter(
-                ImagingSession.subject_id == S.subject_id,
-                ImagingSession.scan_date > S.scan_date)
-            .exists()))
-        # Filter out sessions of subjects that have been reported on less than
-        # the REPORT_INTERVAL (e.g. 365 days) beforehand
-        .filter(~(
-            db.session.query(ImagingSession)  # pylint: disable=no-member
-            .join(Report)  # Only select sessions with a report
-            .filter(
-                ImagingSession.subject_id == S.subject_id,
-                sql.func.abs(
-                    sql.func.julianday(ImagingSession.scan_date) -
-                    sql.func.julianday(S.scan_date)) <= REPORT_INTERVAL)
-            .exists()))
-        .order_by(S.priority.desc(),
-                  S.scan_date))
+        ImagingSession.require_report()
+        .filter_by(data_status=EXPORTED)
+        .order_by(ImagingSession.priority.desc(), ImagingSession.scan_date))
 
     return render_template("reporting/sessions.html",
-                           sessions=to_report)
+                           page_title="Sessions to Report",
+                           sessions=to_report,
+                           form_target=url_for('reporting.report'),
+                           include_priority=True)
 
 
 @mod.route('/report', methods=['GET', 'POST'])
@@ -399,7 +377,7 @@ def import_():
                     # matching session so we can export appropriate scans to
                     # the alfred
                     if all_reports_submitted:
-                        data_status = NOT_REQUIRED
+                        data_status = NOT_CHECKED
                         xnat_uri = ''
                         avail_scan_types = []
                     elif data_status not in (INVALID_LABEL, UNIMELB_DARIS):
@@ -458,3 +436,68 @@ def import_():
     return 200, {'imported': imported,
                  'previous': previous,
                  'skipped': skipped}
+
+
+@mod.route('/fix-sessions', methods=['GET'])
+@requires_login(ADMIN_ROLE)
+def fix_sessions():
+    # Create query for sessions that need to be fixed
+    to_fix = (
+        ImagingSession.require_report()
+        .filter(ImagingSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
+                                                UNIMELB_DARIS]))
+        .order_by(ImagingSession.priority.desc(), ImagingSession.scan_date))
+
+    print(to_fix)
+
+    return render_template("reporting/sessions.html",
+                           page_title="Sessions to Fix",
+                           sessions=to_fix,
+                           form_target=url_for('reporting.repair'),
+                           include_status=True,
+                           include_subject=True,
+                           DATA_STATUS=DATA_STATUS)
+
+
+@mod.route('/repair-session', methods=['GET', 'POST'])
+@requires_login(ADMIN_ROLE)
+def repair():
+
+    form = RepairForm(request.form)
+
+    session_id = form.session_id.data
+
+    # Retrieve session from database
+    img_session = ImagingSession.query.filter_by(
+        id=session_id).first()
+
+    if img_session is None:
+        raise Exception(
+            "Session corresponding to ID {} was not found".format(
+                session_id))
+
+    if form.selected_only.data != 'true':  # From sessions page
+        if form.validate_on_submit():
+
+            # create an report instance not yet stored in the database
+            report = Report(
+                session_id=session_id,
+                reporter_id=g.user.id,
+                findings=form.findings.data,
+                conclusion=int(form.conclusion.data),
+                used_scan_types=ScanType.query.filter(
+                    ScanType.id.in_(form.scan_types.data)).all(),
+                modality=MRI)
+
+            # Insert the record in our database and commit it
+            db.session.add(report)  # pylint: disable=no-member
+            db.session.commit()  # pylint: disable=no-member
+
+            # flash will display a message to the user
+            flash('Report submitted for {}'.format(session_id), 'success')
+            # redirect user to the 'home' method of the user module.
+            return redirect(url_for('reporting.sessions'))
+        else:
+            flash("Some of the submitted values were invalid", "error")
+    return render_template("reporting/form.html", form=form,
+                           field_names=[])
