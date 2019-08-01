@@ -1,12 +1,15 @@
 from flask_wtf import FlaskForm
+import xnatutils
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField, RadioField)
 from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
-from .constants import CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE
-from app import signature_images
+from .constants import (
+    CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE, DATA_STATUS, PRESENT,
+    FIX_OPTIONS)
+from app import app, signature_images
 
 
 class DivWidget():
@@ -39,6 +42,11 @@ class MultiCheckboxField(SelectMultipleField):
     """
     widget = DivWidget()
     option_widget = widgets.CheckboxInput()
+
+
+class DivRadioField(RadioField):
+
+    widget = DivWidget()
 
 
 class LoginForm(FlaskForm):
@@ -92,3 +100,24 @@ class ReportForm(FlaskForm):
             if not self.findings.data and conclusion in PATHOLOGIES:
                 raise ValidationError("Findings must be entered if a "
                                       "pathology is reported")
+
+
+class RepairForm(FlaskForm):
+
+    status = DivRadioField('Status', coerce=int, choices=[
+        (o, DATA_STATUS[o][1]) for o in FIX_OPTIONS])
+    xnat_id = StringField('XNAT ID')
+    session_id = HiddenField('session_id')
+    old_status = HiddenField('old_status')
+    selected_only = HiddenField('selected_only', default=False)
+
+    def validate_xnat_id(self, field):
+        if self.status.data == PRESENT:
+            with xnatutils.connect(app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+                try:
+                    mbi_xnat.experiments[self.xnat_id]  # noqa pylint: disable=no-member
+                except KeyError:
+                    raise ValidationError(
+                        "Did not find XNAT session '{}', please change to "
+                        "valid session ID or select a different data status "
+                        "(i.e. not 'Present')")

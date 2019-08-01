@@ -16,13 +16,13 @@ from werkzeug import (  # noqa pylint: disable=no-name-in-module
     secure_filename)
 import xnatutils
 from app import db, templates_dir, static_dir, app, signature_images, mail
-from .forms import RegisterForm, LoginForm, ReportForm
+from .forms import RegisterForm, LoginForm, ReportForm, RepairForm
 from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
     REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
-    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE, DATA_STATUS, EXPORTED,
-    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED)
+    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE, DATA_STATUS, EXPORTED, FIX_XNAT,
+    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED, WONT_REPORT)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
 
@@ -252,7 +252,83 @@ def report():
             flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
                            form=form, xnat_url=app.config['TARGET_XNAT_URL'],
-                           PATHOLOGIES=[str(c) for c in PATHOLOGIES])
+                           PATHOLOGIES=map(str, PATHOLOGIES))
+
+
+@mod.route('/fix-sessions', methods=['GET'])
+@requires_login(ADMIN_ROLE)
+def fix_sessions():
+    # Create query for sessions that need to be fixed
+    to_fix = (
+        ImagingSession.require_report()
+        .filter(ImagingSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
+                                                UNIMELB_DARIS, FIX_XNAT]))
+        .order_by(ImagingSession.data_status.desc(), ImagingSession.scan_date))
+
+    return render_template("reporting/sessions.html",
+                           page_title="Sessions to Fix",
+                           sessions=to_fix,
+                           form_target=url_for('reporting.repair'),
+                           include_status=True,
+                           include_subject=True,
+                           DATA_STATUS=DATA_STATUS)
+
+
+@mod.route('/repair', methods=['GET', 'POST'])
+@register_breadcrumb(mod, '.fix_sessions', 'Sessions to fix')
+@requires_login(ADMIN_ROLE)
+def repair():
+
+    form = RepairForm(request.form)
+
+    session_id = form.session_id.data
+
+    # Retrieve session from database
+    img_session = ImagingSession.query.filter_by(
+        id=session_id).first()
+
+    if img_session is None:
+        raise Exception(
+            "Session corresponding to ID {} was not found".format(
+                session_id))
+
+    form.old_status.data = img_session.data_status
+
+    if form.selected_only.data != 'true':  # From sessions page
+        if form.validate_on_submit():
+
+            old_xnat_id = img_session.xnat_id
+
+            img_session.data_status = form.status.data
+            img_session.xnat_id = form.xnat_id.data
+
+            db.session.commit()  # pylint: disable=no-member
+
+            # flash will display a message to the user
+            if img_session.data_status == PRESENT:
+                flash('Repaired {}'.format(session_id), 'success')
+            elif form.status.data != form.old_status.data:
+                flash('Marked {} as {}'.format(
+                    session_id, DATA_STATUS[form.status.data][0]), 'warning')
+            elif form.xnat_id.data != old_xnat_id:
+                flash("Updated XNAT ID of {} but didn't update status from {}"
+                      .format(session_id, DATA_STATUS[form.status.data][0]),
+                      'warning')
+            # redirect user to the 'home' method of the user module.
+            return redirect(url_for('reporting.fix-sessions'))
+        else:
+            flash("There were errors with your inputs", "error")
+    else:
+        form.xnat_id.data = img_session.xnat_id
+
+    return render_template("reporting/repair.html", session=img_session,
+                           form=form, xnat_url=app.config['SOURCE_XNAT_URL'],
+                           WONT_REPORT=WONT_REPORT,
+                           WONT_REPORT_STR='", "'.join(map(str, WONT_REPORT)),
+                           xnat_project=form.xnat_id.data.split('_')[0],
+                           xnat_subject='_'.join(
+                               form.xnat_id.data.split('_')[:2]),
+                           map=map)
 
 
 # @mod.route('/import', methods=['GET'])
@@ -436,68 +512,3 @@ def import_():
     return 200, {'imported': imported,
                  'previous': previous,
                  'skipped': skipped}
-
-
-@mod.route('/fix-sessions', methods=['GET'])
-@requires_login(ADMIN_ROLE)
-def fix_sessions():
-    # Create query for sessions that need to be fixed
-    to_fix = (
-        ImagingSession.require_report()
-        .filter(ImagingSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
-                                                UNIMELB_DARIS]))
-        .order_by(ImagingSession.priority.desc(), ImagingSession.scan_date))
-
-    print(to_fix)
-
-    return render_template("reporting/sessions.html",
-                           page_title="Sessions to Fix",
-                           sessions=to_fix,
-                           form_target=url_for('reporting.repair'),
-                           include_status=True,
-                           include_subject=True,
-                           DATA_STATUS=DATA_STATUS)
-
-
-@mod.route('/repair-session', methods=['GET', 'POST'])
-@requires_login(ADMIN_ROLE)
-def repair():
-
-    form = RepairForm(request.form)
-
-    session_id = form.session_id.data
-
-    # Retrieve session from database
-    img_session = ImagingSession.query.filter_by(
-        id=session_id).first()
-
-    if img_session is None:
-        raise Exception(
-            "Session corresponding to ID {} was not found".format(
-                session_id))
-
-    if form.selected_only.data != 'true':  # From sessions page
-        if form.validate_on_submit():
-
-            # create an report instance not yet stored in the database
-            report = Report(
-                session_id=session_id,
-                reporter_id=g.user.id,
-                findings=form.findings.data,
-                conclusion=int(form.conclusion.data),
-                used_scan_types=ScanType.query.filter(
-                    ScanType.id.in_(form.scan_types.data)).all(),
-                modality=MRI)
-
-            # Insert the record in our database and commit it
-            db.session.add(report)  # pylint: disable=no-member
-            db.session.commit()  # pylint: disable=no-member
-
-            # flash will display a message to the user
-            flash('Report submitted for {}'.format(session_id), 'success')
-            # redirect user to the 'home' method of the user module.
-            return redirect(url_for('reporting.sessions'))
-        else:
-            flash("Some of the submitted values were invalid", "error")
-    return render_template("reporting/form.html", form=form,
-                           field_names=[])

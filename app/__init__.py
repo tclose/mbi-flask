@@ -28,5 +28,10 @@ patch_request_class(app)
 def not_found(error):
     return render_template('404.html'), 404
 
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
+
 from .reporting.views import mod as reportingModule  # noqa
 app.register_blueprint(reportingModule)

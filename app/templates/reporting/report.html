@@ -5,11 +5,9 @@
 
 <script>
     function toggletextbox() {
-        if (["1", "2"].includes(document.getElementById("conclusion").value)) {
-            console.log("here");
+        if (["{{ '", "'.join(PATHOLOGIES) }}"].includes(document.getElementById("conclusion").value)) {
             document.getElementById("findings").disabled = '';
         } else {
-            console.log("here2");
             document.getElementById("findings").disabled = 'true';
         }
     }

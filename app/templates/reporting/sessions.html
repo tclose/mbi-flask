@@ -11,6 +11,7 @@
 </script>
 <form name="report_form" method="POST" action="{{ form_target }}">
     <input type="hidden" name="session_id">
+    {# Used to distinguish from the form submitted on the report/repair page #}
     <input type="hidden" name="selected_only">
 </form>
 <table class="sessions">
@@ -22,11 +23,8 @@
             {% endif %}
             <th>Scan Date</th>
             <th>XNAT ID</th>
-            {% if include_subject %}
-            <th>Subject</th>
-            {% endif %}
             {% if include_status %}
-            <th>Status of Data</th>
+            <th>Data Status</th>
             {% endif %}
             {% if include_priority %}
             <th>Priority</th>
@@ -35,7 +33,7 @@
     </thead>
     <tbody>
 {% for session in sessions %}
-    <tr onclick="report_on( {{ session.id }} );">
+    <tr onclick="{{ 'report_on({});'.format(session.id) }}">
         <td class="sessions-id">
             {{ session.id }}
         </td>
@@ -52,7 +50,7 @@
         </td>
         {% if include_status %}
         <td class="sessions-status }}">
-            {{ DATA_STATUS[session.data_status] }}
+            {{ DATA_STATUS[session.data_status][0] }}
         </td>
         {% endif %}
         {% if include_priority %}

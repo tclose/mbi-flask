@@ -49,11 +49,12 @@ if not app.config['TEST']:
 # Add dummy data to test with
 else:
     scan_types = [
-        ScanType('Head_t1_mprage'),
-        ScanType('Head_t2_space_sag_p2_iso'),
-        ScanType('t1_mprage_sag_p3_iso_1_ADNI'),
-        ScanType('t2_space_sag_p2_iso'),
-        ScanType('Head_No MT fl3d_axial_p2_iso')]
+        ScanType('Head_t1_mprage', clinical=True),
+        ScanType('Head_t2_space_sag_p2_iso', clinical=True),
+        ScanType('t1_mprage_sag_p3_iso_1_ADNI', clinical=True),
+        ScanType('t2_space_sag_p2_iso', clinical=True),
+        ScanType('Head_No MT fl3d_axial_p2_iso', clinical=True),
+        ScanType('Shouldnt_be_shown', clinical=False)]
 
     db.session.add_all((  # noqa pylint: disable=no-member
         User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',
