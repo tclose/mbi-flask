@@ -105,7 +105,7 @@ class ReportForm(FlaskForm):
 class RepairForm(FlaskForm):
 
     status = DivRadioField('Status', coerce=int, choices=[
-        (o, DATA_STATUS[o][1]) for o in FIX_OPTIONS])
+        (o, DATA_STATUS[o][1]) for o in FIX_OPTIONS], validators=[Required()])
     xnat_id = StringField('XNAT ID')
     session_id = HiddenField('session_id')
     old_status = HiddenField('old_status')
@@ -113,11 +113,13 @@ class RepairForm(FlaskForm):
 
     def validate_xnat_id(self, field):
         if self.status.data == PRESENT:
-            with xnatutils.connect(app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+            with xnatutils.connect(
+                    server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
                 try:
-                    mbi_xnat.experiments[self.xnat_id]  # noqa pylint: disable=no-member
+                    mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
                 except KeyError:
                     raise ValidationError(
-                        "Did not find XNAT session '{}', please change to "
-                        "valid session ID or select a different data status "
-                        "(i.e. not 'Present')")
+                        "Did not find '{}' XNAT session, please correct or "
+                        "select a different status (i.e. other than '{}')"
+                        .format(
+                            self.xnat_id.data, DATA_STATUS[PRESENT][1]))

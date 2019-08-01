@@ -71,18 +71,15 @@ EXCLUDED = 7  # An executive decision was made to exclude this session
 FIX_XNAT = 8  # It has been identified that the XNAT session needs to be fixed
 
 DATA_STATUS = {
-    EXPORTED: ("Exported", "Exported to Alfred"),
-    PRESENT: ("Present", "Present in XNAT"),
+    EXPORTED: ("Exported", "Exported to Alfred XNAT"),
+    PRESENT: ("Present", "Matches XNAT"),
     NOT_FOUND: ("Not found", "Not found on XNAT"),
-    NOT_SCANNED: ("Not scanned", "Scan was cancelled/not-uploaded"),
-    INVALID_LABEL: ("Invalid label", "Invalid labels in DB"),
+    NOT_SCANNED: ("Not scanned", "Cancelled/not-uploaded"),
+    INVALID_LABEL: ("Invalid label", "Invalid ID"),
     NOT_CHECKED: ("Not checked", "Already reported so not checked"),
     UNIMELB_DARIS: ("Unimelb DaRIS", "Stored in UniMelb DaRIS"),
-    EXCLUDED: ("Excluded", "Manually excluded by executive"),
-    FIX_XNAT: ("Fix on XNAT", "The XNAT session needs to be renamed")
+    EXCLUDED: ("Excluded", "Executive decision to exclude"),
+    FIX_XNAT: ("Fix on XNAT", "Needs to be renamed on XNAT to match")
 }
 
-WONT_REPORT = [NOT_SCANNED, UNIMELB_DARIS, EXCLUDED]
-
-FIX_OPTIONS = [INVALID_LABEL, FIX_XNAT, UNIMELB_DARIS, EXCLUDED, NOT_SCANNED,
-               PRESENT]
+FIX_OPTIONS = [PRESENT, NOT_SCANNED, FIX_XNAT, EXCLUDED]

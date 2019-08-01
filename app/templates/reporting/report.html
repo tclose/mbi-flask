@@ -5,7 +5,7 @@
 
 <script>
     function toggletextbox() {
-        if (["{{ '", "'.join(PATHOLOGIES) }}"].includes(document.getElementById("conclusion").value)) {
+        if (["{{ CRITICAL }}", "{{ NONURGENT }}"].includes(document.getElementById("conclusion").value)) {
             document.getElementById("findings").disabled = '';
         } else {
             document.getElementById("findings").disabled = 'true';

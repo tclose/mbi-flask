@@ -22,7 +22,8 @@ from .decorators import requires_login
 from .constants import (
     REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
     PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE, DATA_STATUS, EXPORTED, FIX_XNAT,
-    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED, WONT_REPORT)
+    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED,
+    CRITICAL, NONURGENT, FIX_OPTIONS)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
 
@@ -77,14 +78,9 @@ def before_request():
 def index():
     # This should be edited to be a single jumping off page instead of
     # redirects
-    if g.user.has_role(REPORTER_ROLE):
-        return redirect(url_for('reporting.sessions'))
-    elif g.user.has_role(ADMIN_ROLE):
-        return redirect(url_for('reporting.fix_sessions'))
-    else:
-        raise Exception(
-            "Unrecognised role for user {} ({})".format(
-                g.user, (str(r) for r in g.user.roles)))
+    return render_template("reporting/index.html",
+                           is_reporter=g.user.has_role(REPORTER_ROLE),
+                           is_admin=g.user.has_role(ADMIN_ROLE))
 
 
 @mod.route('/login/', methods=['GET', 'POST'])
@@ -252,10 +248,12 @@ def report():
             flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
                            form=form, xnat_url=app.config['TARGET_XNAT_URL'],
-                           PATHOLOGIES=map(str, PATHOLOGIES))
+                           PATHOLOGIES=map(str, PATHOLOGIES),
+                           CRITICAL=CRITICAL, NONURGENT=NONURGENT)
 
 
 @mod.route('/fix-sessions', methods=['GET'])
+@register_breadcrumb(mod, '.fix_sessions', 'Sessions to repair')
 @requires_login(ADMIN_ROLE)
 def fix_sessions():
     # Create query for sessions that need to be fixed
@@ -266,7 +264,7 @@ def fix_sessions():
         .order_by(ImagingSession.data_status.desc(), ImagingSession.scan_date))
 
     return render_template("reporting/sessions.html",
-                           page_title="Sessions to Fix",
+                           page_title="Sessions to Repair",
                            sessions=to_fix,
                            form_target=url_for('reporting.repair'),
                            include_status=True,
@@ -275,7 +273,7 @@ def fix_sessions():
 
 
 @mod.route('/repair', methods=['GET', 'POST'])
-@register_breadcrumb(mod, '.fix_sessions', 'Sessions to fix')
+@register_breadcrumb(mod, '.fix_sessions.repair', 'Repair Session')
 @requires_login(ADMIN_ROLE)
 def repair():
 
@@ -315,20 +313,20 @@ def repair():
                       .format(session_id, DATA_STATUS[form.status.data][0]),
                       'warning')
             # redirect user to the 'home' method of the user module.
-            return redirect(url_for('reporting.fix-sessions'))
+            return redirect(url_for('reporting.fix_sessions'))
         else:
-            flash("There were errors with your inputs", "error")
+            flash("Invalid inputs", "error")
     else:
         form.xnat_id.data = img_session.xnat_id
+        form.status.data = img_session.data_status
 
     return render_template("reporting/repair.html", session=img_session,
                            form=form, xnat_url=app.config['SOURCE_XNAT_URL'],
-                           WONT_REPORT=WONT_REPORT,
-                           WONT_REPORT_STR='", "'.join(map(str, WONT_REPORT)),
+                           PRESENT=PRESENT, FIX_XNAT=FIX_XNAT,
+                           FIX_OPTIONS=FIX_OPTIONS,
                            xnat_project=form.xnat_id.data.split('_')[0],
                            xnat_subject='_'.join(
-                               form.xnat_id.data.split('_')[:2]),
-                           map=map)
+                               form.xnat_id.data.split('_')[:2]))
 
 
 # @mod.route('/import', methods=['GET'])

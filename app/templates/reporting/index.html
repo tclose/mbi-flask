@@ -1,0 +1,12 @@
+{% extends "reporting/base.html" %}
+{% block content %}
+<h4>Actions:</h4>
+<ul>
+    {% if is_reporter %}
+    <li><a href="{{ url_for('reporting.sessions') }}">Report sessions</a></li>
+    {% endif %}
+    {% if is_admin %}
+    <li><a href="{{ url_for('reporting.fix_sessions') }}">Repair missing/mis-named sessions</a></li>
+    {% endif %}
+</ul>
+{% endblock %}
