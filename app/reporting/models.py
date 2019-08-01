@@ -241,11 +241,13 @@ class ScanType(db.Model):
     name = db.Column(db.String(150), unique=True)  # noqa pylint: disable=no-member
     clinical = db.Column(db.Boolean)  # pylint: disable=no-member
     alias = db.Column(db.Integer)  # pylint: disable=no-member
+    confirmed = db.Column(db.Boolean)  # pylint: disable=no-member
 
-    def __init__(self, name, clinical, alias=None):
+    def __init__(self, name, clinical, alias=None, confirmed=False):
         self.name = name
         self.clinical = clinical
         self.alias = alias
+        self.confirmed = confirmed
 
     def __repr__(self):
         return "<ScanType {}>".format(self.name)

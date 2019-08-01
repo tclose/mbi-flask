@@ -6,7 +6,7 @@ import csv
 from tqdm import tqdm
 from flask import (
     Blueprint, request, render_template, flash, g, session,
-    redirect, url_for)
+    redirect, url_for, Markup)
 from flask_breadcrumbs import Breadcrumbs, register_breadcrumb
 from flask_mail import Message
 from sqlalchemy import sql, orm
@@ -221,7 +221,7 @@ def report():
 
     # Dynamically set form fields
     form.scan_types.choices = [
-        (t.id, t.name) for t in img_session.avail_scan_types]
+        (t.id, t.name) for t in img_session.avail_scan_types if t.clinical]
 
     if form.selected_only.data != 'true':  # From sessions page
         if form.validate_on_submit():
@@ -298,19 +298,26 @@ def repair():
             old_xnat_id = img_session.xnat_id
 
             img_session.data_status = form.status.data
-            img_session.xnat_id = form.xnat_id.data
+            if form.status.data in (PRESENT, FIX_XNAT):
+                img_session.xnat_id = form.xnat_id.data
 
             db.session.commit()  # pylint: disable=no-member
 
+            edit_link = ('<a href="javascript:select_session({});">Edit</a>'
+                         .format(session_id))
+
             # flash will display a message to the user
             if img_session.data_status == PRESENT:
-                flash('Repaired {}'.format(session_id), 'success')
+                flash(Markup('Repaired {}. {}'.format(session_id, edit_link)),
+                      'success')
             elif form.status.data != form.old_status.data:
-                flash('Marked {} as {}'.format(
-                    session_id, DATA_STATUS[form.status.data][0]), 'warning')
+                flash(Markup('Marked {} as "{}". {}'.format(
+                    session_id, DATA_STATUS[form.status.data][0], edit_link)),
+                      'info')
             elif form.xnat_id.data != old_xnat_id:
-                flash("Updated XNAT ID of {} but didn't update status from {}"
-                      .format(session_id, DATA_STATUS[form.status.data][0]),
+                flash('Updated XNAT ID of {} but didn\'t update status from '
+                      '"{}"'.format(
+                          session_id, DATA_STATUS[form.status.data][0]),
                       'warning')
             # redirect user to the 'home' method of the user module.
             return redirect(url_for('reporting.fix_sessions'))

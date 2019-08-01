@@ -2,7 +2,7 @@
 {% block sub_heading %}{{ page_title }}{% endblock %}
 {% block content %}
 <script>
-    function report_on(session_id) {
+    function select_session(session_id) {
         report_form = document.forms['report_form']
         report_form.session_id.value = session_id
         report_form.selected_only.value = true
@@ -33,7 +33,7 @@
     </thead>
     <tbody>
 {% for session in sessions %}
-    <tr onclick="{{ 'report_on({});'.format(session.id) }}">
+    <tr onclick="{{ 'select_session({});'.format(session.id) }}">
         <td class="sessions-id">
             {{ session.id }}
         </td>
