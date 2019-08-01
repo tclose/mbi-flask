@@ -1,6 +1,7 @@
 from pprint import pprint
 import os.path as op
 import re
+import json
 from datetime import timedelta, datetime
 import csv
 from tqdm import tqdm
@@ -16,7 +17,8 @@ from werkzeug import (  # noqa pylint: disable=no-name-in-module
     secure_filename)
 import xnatutils
 from app import db, templates_dir, static_dir, app, signature_images, mail
-from .forms import RegisterForm, LoginForm, ReportForm, RepairForm
+from .forms import (
+    RegisterForm, LoginForm, ReportForm, RepairForm, CheckScanTypeForm)
 from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
@@ -334,6 +336,59 @@ def repair():
                            xnat_project=form.xnat_id.data.split('_')[0],
                            xnat_subject='_'.join(
                                form.xnat_id.data.split('_')[:2]))
+
+
+@mod.route('/check-scan-types', methods=['GET', 'POST'])
+@register_breadcrumb(mod, '.check_scan_types', 'Check Scan Types')
+@requires_login(ADMIN_ROLE)
+def check_scan_types():
+
+    form = CheckScanTypeForm(request.form)
+    # make sure data are valid, but doesn't validate password is right
+
+    if form.is_submitted():
+        viewed_scans = json.loads(form.viewed_scan_types.data)
+
+        clinical_scans = form.clinical_scans.data
+
+        # Update the scans are clinically relevant
+        (db.session.query(ScanType)  # pylint: disable=no-member
+         .filter(ScanType.id.in_(clinical_scans))
+         .update({ScanType.clinical: True}, synchronize_session=False))
+        # Update the scans aren't clinically relevant
+        (db.session.query(ScanType)  # pylint: disable=no-member
+         .filter(ScanType.id.in_(viewed_scans))
+         .filter(~ScanType.id.in_(clinical_scans))
+         .update({ScanType.clinical: False}, synchronize_session=False))
+        # Mark all viewed scans as confirmed
+        (db.session.query(ScanType)  # pylint: disable=no-member
+         .filter(ScanType.id.in_(viewed_scans))
+         .update({ScanType.clinical: True}, synchronize_session=False))
+
+        db.session.commit()  # pylint: disable=no-member
+        flash("Confirmed clinical relevance of {} scan types"
+              .format(len(viewed_scans)), "success")
+
+    scan_types_to_view = (
+        ScanType.query
+        .filter_by(confirmed=False)
+        .order_by(ScanType.name)
+        .limit(app.config['NUM_SCAN_TYPES_PER_PAGE'])).all()
+
+    if not scan_types_to_view:
+        flash("All scan types have been reviewed", "success")
+        return redirect(url_for('reporting.index'))
+
+    form.clinical_scans.choices = [
+        (t.id, t.name) for t in scan_types_to_view]
+
+    form.clinical_scans.render_kw = {
+        'checked': [t.clinical for t in scan_types_to_view]}
+
+    form.viewed_scan_types.data = json.dumps(
+        [t.id for t in scan_types_to_view])
+
+    return render_template("reporting/check_scan_types.html", form=form)
 
 
 # @mod.route('/import', methods=['GET'])

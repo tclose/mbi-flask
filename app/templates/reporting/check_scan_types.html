@@ -1,0 +1,13 @@
+{% extends "reporting/base.html" %}
+{% from "forms/macros.html" import render_field %}
+{% block sub_heading %}Confirm Clinically Relevant Scan Types{% endblock %}
+{% block content %}
+
+<form method="POST" action=" {{ url_for('reporting.check_scan_types') }}" class="form">
+    {{ form.csrf_token }}
+    {{ render_field(form.clinical_scans, class="form-checkbox") }}
+    {{ form.viewed_scan_types() }}
+    <input type="submit" value="Confirm" class="button green">
+    &nbsp;&nbsp;<a href="{{ url_for('reporting.index') }}">Cancel</a>
+</form>
+{% endblock %}

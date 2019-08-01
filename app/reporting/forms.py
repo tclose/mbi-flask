@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
 import xnatutils
+import itertools
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField, RadioField)
@@ -22,12 +23,18 @@ class DivWidget():
         self.html_tag = html_tag
         self.prefix_label = prefix_label
 
-    def __call__(self, field, **kwargs):
+    def __call__(self, field, checked=None, **kwargs):
         kwargs.setdefault('id', field.id)
         html = ['<div {}>'.format(widgets.html_params(**kwargs))]
-        for subfield in field:
+        if checked is None:
+            checked = itertools.repeat(False)
+        for subfield, chk in zip(field, checked):
+            if chk:
+                sf = subfield(checked=True)
+            else:
+                sf = subfield()
             html.append(
-                '<div class="inline-field">{} {}</div>'.format(subfield(),
+                '<div class="inline-field">{} {}</div>'.format(sf,
                                                                subfield.label))
         html.append('</div>')
         return widgets.HTMLString(''.join(html))
@@ -123,3 +130,10 @@ class RepairForm(FlaskForm):
                         "select a different status (i.e. other than '{}')"
                         .format(
                             self.xnat_id.data, DATA_STATUS[PRESENT][1]))
+
+
+class CheckScanTypeForm(FlaskForm):
+
+    clinical_scans = MultiCheckboxField("Select clinically relevant scans",
+                                        coerce=int)
+    viewed_scan_types = HiddenField("viewed_scan_types")
