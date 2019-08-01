@@ -338,10 +338,10 @@ def repair():
                                form.xnat_id.data.split('_')[:2]))
 
 
-@mod.route('/check-scan-types', methods=['GET', 'POST'])
-@register_breadcrumb(mod, '.check_scan_types', 'Check Scan Types')
+@mod.route('/confirm-scan-types', methods=['GET', 'POST'])
+@register_breadcrumb(mod, '.confirm_scan_types', 'Confirm Scan Types')
 @requires_login(ADMIN_ROLE)
-def check_scan_types():
+def confirm_scan_types():
 
     form = CheckScanTypeForm(request.form)
     # make sure data are valid, but doesn't validate password is right
@@ -363,7 +363,7 @@ def check_scan_types():
         # Mark all viewed scans as confirmed
         (db.session.query(ScanType)  # pylint: disable=no-member
          .filter(ScanType.id.in_(viewed_scans))
-         .update({ScanType.clinical: True}, synchronize_session=False))
+         .update({ScanType.confirmed: True}, synchronize_session=False))
 
         db.session.commit()  # pylint: disable=no-member
         flash("Confirmed clinical relevance of {} scan types"
@@ -388,7 +388,7 @@ def check_scan_types():
     form.viewed_scan_types.data = json.dumps(
         [t.id for t in scan_types_to_view])
 
-    return render_template("reporting/check_scan_types.html", form=form)
+    return render_template("reporting/confirm_scan_types.html", form=form)
 
 
 # @mod.route('/import', methods=['GET'])

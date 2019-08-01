@@ -3,7 +3,7 @@
 {% block sub_heading %}Confirm Clinically Relevant Scan Types{% endblock %}
 {% block content %}
 
-<form method="POST" action=" {{ url_for('reporting.check_scan_types') }}" class="form">
+<form method="POST" action=" {{ url_for('reporting.confirm_scan_types') }}" class="form">
     {{ form.csrf_token }}
     {{ render_field(form.clinical_scans, class="form-checkbox") }}
     {{ form.viewed_scan_types() }}

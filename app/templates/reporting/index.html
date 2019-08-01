@@ -7,7 +7,7 @@
     {% endif %}
     {% if is_admin %}
     <li><a href="{{ url_for('reporting.fix_sessions') }}">Repair missing/mis-named sessions</a></li>
-    <li><a href="{{ url_for('reporting.check_scan_types') }}">Check scan types</a></li>
+    <li><a href="{{ url_for('reporting.confirm_scan_types') }}">Confirm clinical relevance of scan types</a></li>
     {% endif %}
 </ul>
 {% endblock %}
