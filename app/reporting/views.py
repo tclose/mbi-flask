@@ -1,5 +1,6 @@
 from pprint import pprint
 import os.path as op
+import os
 import re
 import json
 from datetime import timedelta, datetime
@@ -15,17 +16,16 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug import (  # noqa pylint: disable=no-name-in-module
     check_password_hash, generate_password_hash,
     secure_filename)
-import xnatutils
+from xnatutils import connect as xnat_connect
 from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import (
     RegisterForm, LoginForm, ReportForm, RepairForm, CheckScanTypeForm)
 from .models import Subject, ImagingSession, User, Report, ScanType, Role
 from .decorators import requires_login
 from .constants import (
-    REPORT_INTERVAL, LOW, IGNORE, NOT_RECORDED, MRI, PET,
-    PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE, DATA_STATUS, EXPORTED, FIX_XNAT,
-    PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED,
-    CRITICAL, NONURGENT, FIX_OPTIONS)
+    LOW, NOT_RECORDED, MRI, PET, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
+    DATA_STATUS, EXPORTED, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
+    INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
 
@@ -249,8 +249,7 @@ def report():
         else:
             flash("Some of the submitted values were invalid", "error")
     return render_template("reporting/report.html", session=img_session,
-                           form=form, xnat_url=app.config['TARGET_XNAT_URL'],
-                           PATHOLOGIES=map(str, PATHOLOGIES),
+                           form=form, PATHOLOGIES=map(str, PATHOLOGIES),
                            CRITICAL=CRITICAL, NONURGENT=NONURGENT)
 
 
@@ -397,8 +396,7 @@ def confirm_scan_types():
                                         num_unconfirmed))
 
 
-# @mod.route('/import', methods=['GET'])
-# @requires_login(ADMIN_ROLE)
+@mod.route('/import', methods=['GET'])
 def import_():
     export_file = app.config['FILEMAKER_EXPORT_FILE']
     if not op.exists(export_file):
@@ -412,7 +410,7 @@ def import_():
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
     axis = User.query.filter_by(name='AXIS Reporting').one()
-    with xnatutils.connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+    with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
         with open(export_file) as f:
             rows = list(csv.DictReader(f))
             for row in tqdm(rows):
@@ -578,3 +576,42 @@ def import_():
     return 200, {'imported': imported,
                  'previous': previous,
                  'skipped': skipped}
+
+
+@mod.route('/export', methods=['GET'])
+def export():
+
+    tmp_download_dir = app.config['TEMP_DOWNLOAD_DIR']
+
+    os.makedirs(tmp_download_dir, exist_ok=True)
+
+    with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+        with xnat_connect(server=app.config['TARGET_XNAT_URL']) as alf_xnat:
+            alf_project = alf_xnat.projects[app.config['TARGET_XNAT_PROJECT']]  # noqa pylint: disable=no-member
+            for session in ImagingSession.ready_for_export():
+                mbi_session = mbi_xnat.experiments[session.xnat_id]  # noqa pylint: disable=no-member
+                try:
+                    alf_subject = alf_project.subjects[session.subject.mbi_id]
+                except KeyError:
+                    alf_subject = alf_xnat.classes.SubjectData(  # noqa pylint: disable=no-member
+                        label=session.subject.mbi_id, parent=alf_project)
+                alf_session = alf_xnat.classes.MrSessionData(  # noqa pylint: disable=no-member
+                    label=session.id, parent=alf_subject)
+                already_exported = [
+                    s.type for s in alf_session.scans.values()]
+                # Loop through clinically relevant scans that haven't been
+                # exported and export
+                for scan_type in session.scan_types:
+                    if (scan_type.clinical and
+                            scan_type.name not in already_exported):
+                        mbi_scan = mbi_session.scans[scan_type.name]
+                        tmp_dir = op.join(tmp_download_dir, session.id)
+                        mbi_scan.download_dir(tmp_dir)
+                        alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
+                            id=mbi_scan.id, type=mbi_scan.type,
+                            parent=alf_session)
+                        resource = alf_scan.create_resource('DICOM')
+                        for fname in os.listdir(tmp_dir):
+                            resource.upload(op.join(tmp_dir, fname), fname)
+                # Trigger DICOM information extraction
+                login.put(alf_session.uri + '?pullDataFromHeaders=true')

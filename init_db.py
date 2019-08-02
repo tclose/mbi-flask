@@ -5,12 +5,13 @@ from argparse import ArgumentParser
 import getpass
 import random
 import string
-from app import db, app
 from datetime import datetime
 from app.reporting.models import (
     Subject, ImagingSession, ScanType, Report, session_scantype_assoc_table,
     report_scantype_assoc_table, user_role_assoc_table, User, Role)
-from app.reporting.constants import MRI, ADMIN_ROLE, REPORTER_ROLE
+from app.reporting.constants import (
+    MRI, ADMIN_ROLE, REPORTER_ROLE, LOW, MEDIUM, HIGH, PRESENT, EXPORTED)
+from app import db, app
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
 
 parser = ArgumentParser("Initialise DB for Flask app")
@@ -81,26 +82,33 @@ else:
 
     img_sessions = {}
 
-    for subj_id, study_id, xnat_id, xnat_uri, scan_date, priority in [
-            (0, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017', 1),
+    for subj_id, study_id, xnat_id, xnat_uri, scan_date, priority, status in [
+            (0, 1231, 'MRH100_124_MR02', 'MBI_XNAT_E00626', '10/04/2017',
+             LOW, EXPORTED),
             (1, 1244, 'SHOULD_NOT_BE_SHOWN_NEWER_SESSION',
-             'MBI_XNAT_E00627', '11/02/2018', 1),
-            (1, 1254, 'MMH092_009_MRPT01', 'MBI_XNAT_E00628', '12/02/2018', 1),
-            (2, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629', '11/10/2017', 1),
+             'MBI_XNAT_E00627', '11/02/2018', LOW, EXPORTED),
+            (1, 1254, 'MMH092_009_MRPT01',
+             'MBI_XNAT_E00628', '12/02/2018', LOW, EXPORTED),
+            (2, 1366, 'MRH999_999_MR01', 'MBI_XNAT_E00629',
+             '11/10/2017', LOW, EXPORTED),
             (2, 1500, 'SHOULD_NOT_BE_SHOWN_PREV_REPORT',
-             'MBI_XNAT_E00630', '11/5/2018', 1),
-            (2, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631', '11/1/2019', 3),
-            (3, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632', '13/01/2019', 2),
-            (4, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633', '11/02/2019', 1),
-            (5, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634', '1/08/2017', 2),
-            (6, 9834, 'SHOULD_BE_IGNORED', 'MBI_XNAT_E00635', '10/11/2018',
-             0)]:
+             'MBI_XNAT_E00630', '11/5/2018', LOW, EXPORTED),
+            (2, 1600, 'MRH999_999_MR99', 'MBI_XNAT_E00631',
+             '11/1/2019', HIGH, EXPORTED),
+            (3, 3413, 'MRH088_065_MR01', 'MBI_XNAT_E00632',
+             '13/01/2019', MEDIUM, EXPORTED),
+            (4, 4500, 'MRH112_002_MR01', 'MBI_XNAT_E00633',
+             '11/02/2019', LOW, EXPORTED),
+            (5, 5003, 'MRH100_025_MR01', 'MBI_XNAT_E00634',
+             '1/08/2017', MEDIUM, EXPORTED),
+            (6, 9834, 'SHOULD_NOT_BE_SHOWN_AS_NOT_EXPORTED', 'MBI_XNAT_E00635',
+             '10/11/2018', LOW, PRESENT)]:
         img_session = img_sessions[study_id] = ImagingSession(
             study_id, subjects[subj_id], xnat_id, xnat_uri,
             datetime.strptime(scan_date, '%d/%m/%Y'),
             random.choices(scan_types,
                            k=random.randint(1, len(scan_types) - 1)),
-            priority)
+            data_status=status, priority=priority)
         db.session.add(img_session)  # noqa pylint: disable=no-member
 
     db.session.commit()  # noqa pylint: disable=no-member

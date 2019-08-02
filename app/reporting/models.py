@@ -4,8 +4,8 @@ from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import sql, orm
 from .constants import (
-    REPORT_INTERVAL, SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, IGNORE,
-    NOT_SCANNED, EXCLUDED)
+    SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, NOT_SCANNED, EXCLUDED,
+    PRESENT)
 
 Base = declarative_base()
 
@@ -138,7 +138,7 @@ class ImagingSession(db.Model):
     # project_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
     xnat_id = db.Column(db.String(50))  # noqa pylint: disable=no-member
-    xnat_uri = db.Column(db.String(200))  # noqa pylint: disable=no-member
+    # xnat_uri = db.Column(db.String(200))  # noqa pylint: disable=no-member
     scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
     data_status = db.Column(db.Integer)  # pylint: disable=no-member
@@ -147,12 +147,9 @@ class ImagingSession(db.Model):
     # project = db.relationship('Project', back_populates='sessions')  # noqa pylint: disable=no-member
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
-    avail_scan_types = db.relationship(  # noqa pylint: disable=no-member
+    scan_types = db.relationship(  # noqa pylint: disable=no-member
         'ScanType',  # noqa pylint: disable=no-member
         secondary='reporting_session_scantype_assoc')
-    exported_scan_types = db.relationship(  # noqa pylint: disable=no-member
-        'ScanType',  # noqa pylint: disable=no-member
-        secondary='reporting_session_exported_scantype_assoc')
 
     def __init__(self, id, subject, xnat_id, xnat_uri, scan_date,
                  avail_scan_types, data_status, priority=LOW):
@@ -187,7 +184,7 @@ class ImagingSession(db.Model):
         require_report = (
             db.session.query(ImagingSession)  # pylint: disable=no-member
             # Filter out "ignored" sessions that are to be reported by AXIS
-            .filter(ImagingSession.priority != IGNORE)
+            .filter(~ImagingSession.data_status.in_(NOT_SCANNED, EXCLUDED))
             # Filter out sessions of subjects that have a more recent session
             .filter(~(
                 db.session.query(S)  # pylint: disable=no-member
@@ -203,11 +200,40 @@ class ImagingSession(db.Model):
                 .join(Report)  # Only select sessions with a report
                 .filter(
                     S.subject_id == ImagingSession.subject_id,
-                    sql.func.abs(
+                    (sql.func.abs(
                         sql.func.julianday(ImagingSession.scan_date) -
-                        sql.func.julianday(S.scan_date)) <= REPORT_INTERVAL)
+                        sql.func.julianday(S.scan_date)) <=
+                     app.config['REPORT_INTERVAL']))
                 .exists())))
         return require_report
+
+    @classmethod
+    def ready_for_export(cls):
+        return (
+            cls.require_report()
+            # Get sessions where the data is present on XNAT
+            .filter_by(data_status=PRESENT)
+            # Filter out any sessions where there are scan types that haven't
+            # been confirmed as clinically or not-clinically relevant
+            .filter(~(
+                ScanType.query
+                .join(session_scantype_assoc_table)
+                .filter(
+                    session_scantype_assoc_table.session_id ==
+                    ImagingSession.id)
+                .filter_by(confirmed=False))))
+
+    @property
+    def target_xnat_uri(self):
+        return '{}/data/projects/{}/experiments/{}'.format(
+            app.config['TARGET_XNAT_URL'], app.config['TARGET_XNAT_PROJECT'],
+            self.xnat_id)
+
+    @property
+    def source_xnat_uri(self):
+        return '{}/data/projects/{}/experiments/{}'.format(
+            app.config['SOURCE_XNAT_URL'], self.xnat_id.split('_')[0],
+            self.xnat_id)
 
 
 class Report(db.Model):

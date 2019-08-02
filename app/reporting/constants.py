@@ -31,21 +31,15 @@ CONCLUSION = {
 }
 
 
-IGNORE = 0
 LOW = 1
 MEDIUM = 2
 HIGH = 3
 
 SESSION_PRIORITY = {
-    IGNORE: 'Ignored',
     LOW: "Low",
     MEDIUM: "High",
     HIGH: "Urgent"
 }
-
-# The number of days between sessions before a new report is required
-REPORT_INTERVAL = 365
-
 
 MRI = 0
 PET = 1

@@ -25,7 +25,7 @@
         </tr>
         <tr>
             <td class="report-label">XNAT ID:</td>
-            <td class="report-value"><a href="{{ xnat_url }}/data/archive/experiments/{{session.xnat_uri}}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
+            <td class="report-value"><a href="{{ session.target_xnat_uri }}?format=html" target="_blank">{{ session.xnat_id }}</a></td>
         </tr>
         <tr>
             <td class="report-label">Scan Date:</td>
