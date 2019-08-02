@@ -20,11 +20,12 @@ from xnatutils import connect as xnat_connect
 from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import (
     RegisterForm, LoginForm, ReportForm, RepairForm, CheckScanTypeForm)
-from .models import Subject, ImagingSession, User, Report, ScanType, Role
+from ..models import (
+    Project, Subject, ImgSession, User, Report, Role, Scan, ScanType)
 from .decorators import requires_login
-from .constants import (
+from ..constants import (
     LOW, NOT_RECORDED, MRI, PET, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
-    DATA_STATUS, EXPORTED, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
+    DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
     INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
@@ -35,14 +36,6 @@ default_breadcrumb_root(mod, '.')
 
 
 daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
-
-clinical_res = [re.compile(s) for s in (
-    r'(?!.*kspace.*).*(?<![a-zA-Z])(?i)(t1).*',
-    r'(?!.*kspace.*).*(?<![a-zA-Z])(?i)(t2).*',
-    r'(?!.*kspace.*).*(?i)(mprage).*',
-    r'(?!.*kspace.*).*(?i)(qsm).*',
-    r'(?!.*kspace.*).*(?i)(flair).*',
-    r'(?!.*kspace.*).*(?i)(fl3d).*')]
 
 
 @mod.before_request
@@ -189,9 +182,21 @@ def sessions():
 
     # Create query for sessions that still need to be reported
     to_report = (
-        ImagingSession.require_report()
-        .filter_by(data_status=EXPORTED)
-        .order_by(ImagingSession.priority.desc(), ImagingSession.scan_date))
+        ImgSession.require_report()
+        .filter_by(data_status=PRESENT)
+        .filter(~(
+            Scan.query
+            .join(ScanType)
+            .filter(
+                Scan.session_id == ImgSession.id,
+                sql.or_(~ScanType.confirmed, sql.and_(ScanType.clinical,
+                                                      ~Scan.exported)))
+            .exists()))
+        .order_by(ImgSession.priority.desc(), ImgSession.scan_date)).all()
+
+    if not to_report:
+        flash("There are no more sessions to report!", "success")
+        return redirect(url_for('reporting.index'))
 
     return render_template("reporting/sessions.html",
                            page_title="Sessions to Report",
@@ -213,7 +218,7 @@ def report():
     session_id = form.session_id.data
 
     # Retrieve session from database
-    img_session = ImagingSession.query.filter_by(
+    img_session = ImgSession.query.filter_by(
         id=session_id).first()
 
     if img_session is None:
@@ -222,8 +227,8 @@ def report():
                 session_id))
 
     # Dynamically set form fields
-    form.scan_types.choices = [
-        (t.id, t.name) for t in img_session.avail_scan_types if t.clinical]
+    form.scans.choices = [
+        (s.id, s.type_.name) for s in img_session.scans if s.exported]
 
     if form.selected_only.data != 'true':  # From sessions page
         if form.validate_on_submit():
@@ -234,8 +239,8 @@ def report():
                 reporter_id=g.user.id,
                 findings=form.findings.data,
                 conclusion=int(form.conclusion.data),
-                used_scan_types=ScanType.query.filter(
-                    ScanType.id.in_(form.scan_types.data)).all(),
+                used_scans=Scan.query.filter(
+                    Scan.id.in_(form.scans.data)).all(),
                 modality=MRI)
 
             # Insert the record in our database and commit it
@@ -259,10 +264,14 @@ def report():
 def fix_sessions():
     # Create query for sessions that need to be fixed
     to_fix = (
-        ImagingSession.require_report()
-        .filter(ImagingSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
-                                                UNIMELB_DARIS, FIX_XNAT]))
-        .order_by(ImagingSession.data_status.desc(), ImagingSession.scan_date))
+        ImgSession.require_report()
+        .filter(ImgSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
+                                            UNIMELB_DARIS, FIX_XNAT]))
+        .order_by(ImgSession.data_status.desc(), ImgSession.scan_date)).all()
+
+    if not to_fix:
+        flash("There are no more sessions to repair!", "success")
+        return redirect(url_for('reporting.index'))
 
     return render_template("reporting/sessions.html",
                            page_title="Sessions to Repair",
@@ -283,7 +292,7 @@ def repair():
     session_id = form.session_id.data
 
     # Retrieve session from database
-    img_session = ImagingSession.query.filter_by(
+    img_session = ImgSession.query.filter_by(
         id=session_id).first()
 
     if img_session is None:
@@ -329,8 +338,7 @@ def repair():
         form.status.data = img_session.data_status
 
     return render_template("reporting/repair.html", session=img_session,
-                           form=form, xnat_url=app.config['SOURCE_XNAT_URL'],
-                           PRESENT=PRESENT, FIX_XNAT=FIX_XNAT,
+                           form=form, PRESENT=PRESENT, FIX_XNAT=FIX_XNAT,
                            FIX_OPTIONS=FIX_OPTIONS,
                            xnat_project=form.xnat_id.data.split('_')[0],
                            xnat_subject='_'.join(
@@ -379,7 +387,7 @@ def confirm_scan_types():
         .limit(app.config['NUM_SCAN_TYPES_PER_PAGE'])).all()
 
     if not scan_types_to_view:
-        flash("All scan types have been reviewed", "success")
+        flash("All scan types have been reviewed!", "success")
         return redirect(url_for('reporting.index'))
 
     form.clinical_scans.choices = [
@@ -416,17 +424,23 @@ def import_():
             for row in tqdm(rows):
                 data_status = PRESENT
                 # Check to see if the project ID is one of the valid types
-                project_id = row['ProjectID']
-                if project_id is None or not project_id:
-                    project_id = ''
+                mbi_project_id = row['ProjectID']
+                if mbi_project_id is None or not mbi_project_id:
+                    mbi_project_id = ''
                     data_status = INVALID_LABEL
                 else:
-                    project_id = project_id.strip()
-                    if project_id[:3] not in ('MRH', 'MMH', 'CLF'):
+                    mbi_project_id = mbi_project_id.strip()
+                    if mbi_project_id[:3] not in ('MRH', 'MMH', 'CLF'):
                         print("skipping {} from {}".format(row['StudyID'],
-                                                           project_id))
+                                                           mbi_project_id))
                         skipped.append(row)
                         continue
+                try:
+                    project = Subject.query.filter_by(
+                        mbi_id=mbi_project_id).one()
+                except orm.exc.NoResultFound:
+                    project = Project(mbi_project_id)
+                    db.session.add(project)  # pylint: disable=no-member
                 # Extract subject information from CSV row
                 mbi_subject_id = (row['SubjectID'].strip()
                                   if row['SubjectID'] is not None else '')
@@ -455,7 +469,7 @@ def import_():
                     db.session.add(subject)  # pylint: disable=no-member
                 # Check to see whether imaging session has previously been
                 # reported or not
-                if ImagingSession.query.get(study_id) is None:
+                if ImgSession.query.get(study_id) is None:
                     # Parse scan date
                     try:
                         scan_date = datetime.strptime(
@@ -497,7 +511,7 @@ def import_():
                     # Determine whether there are outstanding report(s) for
                     # this session or not and what the XNAT session prefix is
                     all_reports_submitted = bool(row['MrReport'])
-                    if project_id.startswith('MMH'):
+                    if mbi_project_id.startswith('MMH'):
                         visit_prefix = 'MRPT'
                         all_reports_submitted &= bool(row['PetReport'])
                     else:
@@ -512,50 +526,43 @@ def import_():
                     except (ValueError, TypeError, AttributeError):
                         data_status = INVALID_LABEL
                     xnat_id = '_'.join(
-                        (project_id, subject_id, visit_id)).upper()
+                        (mbi_project_id, subject_id, visit_id)).upper()
                     # If the session hasn't been reported on check XNAT for
                     # matching session so we can export appropriate scans to
                     # the alfred
+                    scan_type_names = []
                     if all_reports_submitted:
                         data_status = NOT_CHECKED
-                        xnat_uri = ''
-                        avail_scan_types = []
                     elif data_status not in (INVALID_LABEL, UNIMELB_DARIS):
                         try:
                             exp = mbi_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
                         except KeyError:
-                            xnat_uri = ''
                             data_status = NOT_FOUND
                         else:
-                            avail_scan_types = []
                             try:
                                 for scan in exp.scans.values():
-                                    try:
-                                        scan_type = ScanType.query.filter_by(
-                                            name=scan.type).one()
-                                    except orm.exc.NoResultFound:
-                                        scan_type = ScanType(
-                                            scan.type,
-                                            clinical=any(
-                                                r.match(scan.type)
-                                                for r in clinical_res))
-                                        db.session.add(scan_type)  # noqa pylint: disable=no-member
-                                    avail_scan_types.append(scan_type)
+                                    scan_type_names.append(scan.type)
                             except XNATResponseError as e:
                                 raise Exception(
                                     "Problem reading scans of {} ({}):\n{}"
                                     .format(study_id, xnat_id, str(e)))
-                            xnat_uri = exp.uri.split('/')[-1]
-                    else:
-                        xnat_uri = ''
-                        avail_scan_types = []
-                    session = ImagingSession(study_id, subject,
-                                             xnat_id,
-                                             xnat_uri, scan_date,
-                                             avail_scan_types,
-                                             data_status,
-                                             priority=LOW)
+                    session = ImgSession(study_id,
+                                         project,
+                                         subject,
+                                         xnat_id,
+                                         scan_date,
+                                         data_status,
+                                         priority=LOW)
                     db.session.add(session)  # pylint: disable=no-member
+                    # Add scans to session
+                    for st in scan_type_names:
+                        try:
+                            scan_type = ScanType.query.filter_by(name=st).one()
+                        except orm.exc.NoResultFound:
+                            scan_type = ScanType(st)
+                            db.session.add(scan_type)  # noqa pylint: disable=no-member
+                        db.session.add(Scan(session, scan_type))  # noqa pylint: disable=no-member
+                    # Add dummy reports if existing report was stored in FM
                     if row['MrReport'] is not None and row['MrReport'].strip():
                         if 'MSH' in row['MrReport']:
                             reporter = axis
@@ -588,7 +595,7 @@ def export():
     with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
         with xnat_connect(server=app.config['TARGET_XNAT_URL']) as alf_xnat:
             alf_project = alf_xnat.projects[app.config['TARGET_XNAT_PROJECT']]  # noqa pylint: disable=no-member
-            for session in ImagingSession.ready_for_export():
+            for session in ImgSession.ready_for_export():
                 mbi_session = mbi_xnat.experiments[session.xnat_id]  # noqa pylint: disable=no-member
                 try:
                     alf_subject = alf_project.subjects[session.subject.mbi_id]
@@ -601,10 +608,10 @@ def export():
                     s.type for s in alf_session.scans.values()]
                 # Loop through clinically relevant scans that haven't been
                 # exported and export
-                for scan_type in session.scan_types:
-                    if (scan_type.clinical and
-                            scan_type.name not in already_exported):
-                        mbi_scan = mbi_session.scans[scan_type.name]
+                for scan in session.scans:
+                    if (scan.scan_type.clinical and
+                            scan.scan_type.name not in already_exported):
+                        mbi_scan = mbi_session.scans[scan.scan_type.name]
                         tmp_dir = op.join(tmp_download_dir, session.id)
                         mbi_scan.download_dir(tmp_dir)
                         alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
@@ -613,5 +620,7 @@ def export():
                         resource = alf_scan.create_resource('DICOM')
                         for fname in os.listdir(tmp_dir):
                             resource.upload(op.join(tmp_dir, fname), fname)
+                        scan.exported = True
+                        db.session.commit()  # pylint: disable=no-member
                 # Trigger DICOM information extraction
                 login.put(alf_session.uri + '?pullDataFromHeaders=true')

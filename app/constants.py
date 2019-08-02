@@ -54,7 +54,6 @@ ADMIN_ROLE = 1
 REPORTER_ROLE = 2
 
 # Session data statuses
-EXPORTED = 0  # Clinically relevant scans have been exported to Alfred XNAT
 PRESENT = 1  # Found matching session on MBI XNAT
 NOT_FOUND = 2  # Did not find matching session on MBI-XNAT
 NOT_SCANNED = 3  # This session was never scanned
@@ -65,7 +64,6 @@ EXCLUDED = 7  # An executive decision was made to exclude this session
 FIX_XNAT = 8  # It has been identified that the XNAT session needs to be fixed
 
 DATA_STATUS = {
-    EXPORTED: ("Exported", "Exported to Alfred XNAT"),
     PRESENT: ("Present", "Matches XNAT"),
     NOT_FOUND: ("Not found", "Not found on XNAT"),
     NOT_SCANNED: ("Not scanned", "Cancelled/not-uploaded"),

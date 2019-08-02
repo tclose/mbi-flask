@@ -18,11 +18,9 @@
     <thead>
         <tr>
             <th>Session (Study) ID</th>
-            {% if include_subject %}
             <th>Subject</th>
-            {% endif %}
             <th>Scan Date</th>
-            <th>XNAT ID</th>
+            <th>MBI XNAT ID</th>
             {% if include_status %}
             <th>Data Status</th>
             {% endif %}
@@ -37,11 +35,9 @@
         <td class="sessions-id">
             {{ session.id }}
         </td>
-        {% if include_subject %}
         <td class="sessions-subject }}">
             {{ session.subject.mbi_id }}
         </td>
-        {% endif %}
         <td class="sessions-scandate">
             {{ session.scan_date.strftime('%d/%m/%Y') }}
         </td>

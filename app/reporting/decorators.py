@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import g, flash, redirect, url_for, request
 from app import app
-from .models import Role
+from ..models import Role
 
 
 def requires_login(role_id=None):

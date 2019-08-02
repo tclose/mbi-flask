@@ -7,7 +7,7 @@ from wtforms import (
 from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
-from .constants import (
+from ..constants import (
     CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE, DATA_STATUS, PRESENT,
     FIX_OPTIONS)
 from app import app, signature_images
@@ -92,7 +92,7 @@ class ReportForm(FlaskForm):
         'Conclusion',
         choices=[(None, '')] + [(str(i), s)
                                 for i, (s, _) in CONCLUSION.items()])
-    scan_types = MultiCheckboxField(
+    scans = MultiCheckboxField(
         'Scans used', [DataRequired("At least one scan must be selected")],
         coerce=int)
     session_id = HiddenField('session_id')
