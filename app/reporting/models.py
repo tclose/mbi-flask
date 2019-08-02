@@ -4,7 +4,8 @@ from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import sql, orm
 from .constants import (
-    REPORT_INTERVAL, SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, IGNORE)
+    REPORT_INTERVAL, SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, IGNORE,
+    NOT_SCANNED, EXCLUDED)
 
 Base = declarative_base()
 
@@ -82,6 +83,20 @@ class Role(db.Model):
         self.name = name
 
 
+# class Project(db.Model):
+#     """
+#     A simple representation of the project an imaging session belongs to
+#     """
+
+#     __tablename__ = 'project'
+
+#     id = db.Column(db.Integer, primary_key=True)  # noqa pylint: disable=no-member
+#     mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+
+#     # Relationships
+#     sessions = db.relationship('ImagingSession', back_populates='project')  # noqa pylint: disable=no-member
+
+
 class Subject(db.Model):
     """
     Basic information about the subject of the imaging session. It is
@@ -120,6 +135,7 @@ class ImagingSession(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    # project_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('reporting_subject.id'))  # noqa pylint: disable=no-member
     xnat_id = db.Column(db.String(50))  # noqa pylint: disable=no-member
     xnat_uri = db.Column(db.String(200))  # noqa pylint: disable=no-member
@@ -128,11 +144,15 @@ class ImagingSession(db.Model):
     data_status = db.Column(db.Integer)  # pylint: disable=no-member
 
     # Relationships
+    # project = db.relationship('Project', back_populates='sessions')  # noqa pylint: disable=no-member
     subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
     avail_scan_types = db.relationship(  # noqa pylint: disable=no-member
         'ScanType',  # noqa pylint: disable=no-member
         secondary='reporting_session_scantype_assoc')
+    exported_scan_types = db.relationship(  # noqa pylint: disable=no-member
+        'ScanType',  # noqa pylint: disable=no-member
+        secondary='reporting_session_exported_scantype_assoc')
 
     def __init__(self, id, subject, xnat_id, xnat_uri, scan_date,
                  avail_scan_types, data_status, priority=LOW):
@@ -173,7 +193,8 @@ class ImagingSession(db.Model):
                 db.session.query(S)  # pylint: disable=no-member
                 .filter(
                     S.subject_id == ImagingSession.subject_id,
-                    S.scan_date > ImagingSession.scan_date)
+                    S.scan_date > ImagingSession.scan_date,
+                    ~S.data_status.in_(NOT_SCANNED, EXCLUDED))
                 .exists()))
             # Filter out sessions of subjects that have been reported on less
             # than the REPORT_INTERVAL (e.g. 365 days) beforehand
@@ -243,6 +264,11 @@ class ScanType(db.Model):
     alias = db.Column(db.Integer)  # pylint: disable=no-member
     confirmed = db.Column(db.Boolean)  # pylint: disable=no-member
 
+    # Relationships
+    sessions = db.relationship(  # noqa pylint: disable=no-member
+        'Session',  # noqa pylint: disable=no-member
+        secondary='reporting_report_scantype_assoc')
+
     def __init__(self, name, clinical, alias=None, confirmed=False):
         self.name = name
         self.clinical = clinical
@@ -268,6 +294,14 @@ session_scantype_assoc_table = db.Table(  # pylint: disable=no-member
     db.Column('session_id', db.Integer, db.ForeignKey('reporting_session.id')),  # noqa pylint: disable=no-member
     db.Column('scantype_id', db.Integer,  # noqa pylint: disable=no-member
               db.ForeignKey('reporting_scantype.id')))  # noqa pylint: disable=no-member
+
+
+# session_exported_scantype_assoc_table = db.Table(  # noqa pylint: disable=no-member
+#     'reporting_session_exported_scantype_assoc', db.Model.metadata,  # noqa pylint: disable=no-member
+#     db.Column('id', db.Integer, primary_key=True),  # noqa pylint: disable=no-member
+#     db.Column('session_id', db.Integer, db.ForeignKey('reporting_session.id')),  # noqa pylint: disable=no-member
+#     db.Column('scantype_id', db.Integer,  # noqa pylint: disable=no-member
+#               db.ForeignKey('reporting_scantype.id')))  # noqa pylint: disable=no-member
 
 
 report_scantype_assoc_table = db.Table(  # pylint: disable=no-member
