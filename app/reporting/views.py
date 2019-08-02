@@ -75,7 +75,7 @@ def before_request():
 
 
 @mod.route('/', methods=['GET'])
-@register_breadcrumb(mod, '.', 'Home')
+@register_breadcrumb(mod, '.', 'Incidental Reporting')
 @requires_login()
 def index():
     # This should be edited to be a single jumping off page instead of
@@ -352,22 +352,26 @@ def confirm_scan_types():
         clinical_scans = form.clinical_scans.data
 
         # Update the scans are clinically relevant
-        (db.session.query(ScanType)  # pylint: disable=no-member
+        (ScanType.query  # pylint: disable=no-member
          .filter(ScanType.id.in_(clinical_scans))
          .update({ScanType.clinical: True}, synchronize_session=False))
         # Update the scans aren't clinically relevant
-        (db.session.query(ScanType)  # pylint: disable=no-member
+        (ScanType.query  # pylint: disable=no-member
          .filter(ScanType.id.in_(viewed_scans))
          .filter(~ScanType.id.in_(clinical_scans))
          .update({ScanType.clinical: False}, synchronize_session=False))
         # Mark all viewed scans as confirmed
-        (db.session.query(ScanType)  # pylint: disable=no-member
+        (ScanType.query
          .filter(ScanType.id.in_(viewed_scans))
          .update({ScanType.confirmed: True}, synchronize_session=False))
 
         db.session.commit()  # pylint: disable=no-member
         flash("Confirmed clinical relevance of {} scan types"
               .format(len(viewed_scans)), "success")
+
+    num_unconfirmed = (
+        ScanType.query
+        .filter_by(confirmed=False)).count()
 
     scan_types_to_view = (
         ScanType.query
@@ -388,7 +392,9 @@ def confirm_scan_types():
     form.viewed_scan_types.data = json.dumps(
         [t.id for t in scan_types_to_view])
 
-    return render_template("reporting/confirm_scan_types.html", form=form)
+    return render_template("reporting/confirm_scan_types.html", form=form,
+                           num_showing=(len(scan_types_to_view),
+                                        num_unconfirmed))
 
 
 # @mod.route('/import', methods=['GET'])
