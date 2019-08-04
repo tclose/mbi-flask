@@ -221,7 +221,7 @@ class ImgSession(db.Model):
                     Scan.session_id == ImgSession.id,
                     ~Scan.exported)
                 .join(ScanType)
-                .filter(~ScanType.confirmed))))
+                .filter(~ScanType.confirmed).exists())))
 
     @property
     def target_xnat_uri(self):

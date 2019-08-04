@@ -3,6 +3,7 @@ import os.path as op
 import os
 import re
 import json
+import glob
 from datetime import timedelta, datetime
 import csv
 from tqdm import tqdm
@@ -687,18 +688,20 @@ def export():
                 # Loop through clinically relevant scans that haven't been
                 # exported and export
                 for scan in session.scans:
-                    if (scan.scan_type.clinical and
-                            scan.scan_type.name not in already_exported):
-                        mbi_scan = mbi_session.scans[scan.scan_type.name]
-                        tmp_dir = op.join(tmp_download_dir, session.id)
+                    if (scan.type_.clinical and
+                            scan.type_.name not in already_exported):
+                        mbi_scan = mbi_session.scans[scan.type_.name]
+                        tmp_dir = op.join(tmp_download_dir, str(session.id))
                         mbi_scan.download_dir(tmp_dir)
                         alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
                             id=mbi_scan.id, type=mbi_scan.type,
                             parent=alf_session)
                         resource = alf_scan.create_resource('DICOM')
-                        for fname in os.listdir(tmp_dir):
+                        for fname in os.listdir(glob.glob(op.join(
+                            tmp_dir, '*', 'scans', '*', 'resources',
+                                'DICOM', 'files'))[0]):
                             resource.upload(op.join(tmp_dir, fname), fname)
                         scan.exported = True
                         db.session.commit()  # pylint: disable=no-member
                 # Trigger DICOM information extraction
-                login.put(alf_session.uri + '?pullDataFromHeaders=true')
+                alf_xnat.put(alf_session.uri + '?pullDataFromHeaders=true')
