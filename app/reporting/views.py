@@ -26,7 +26,8 @@ from .decorators import requires_login
 from ..constants import (
     LOW, NOT_RECORDED, MRI, PET, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
     DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
-    INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS)
+    INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS,
+    FOUND_NO_CLINICAL, NOT_REQUIRED)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 from xnat.exceptions import XNATResponseError
 
@@ -184,6 +185,11 @@ def sessions():
     to_report = (
         ImgSession.require_report()
         .filter_by(data_status=PRESENT)
+        .filter(
+            Scan.query
+            .filter(Scan.session_id == ImgSession.id,
+                    Scan.exported)
+            .exists())
         .filter(~(
             Scan.query
             .join(ScanType)
@@ -202,6 +208,7 @@ def sessions():
                            page_title="Sessions to Report",
                            sessions=to_report,
                            form_target=url_for('reporting.report'),
+                           number_of_rows=len(to_report),
                            include_priority=True)
 
 
@@ -265,9 +272,31 @@ def fix_sessions():
     # Create query for sessions that need to be fixed
     to_fix = (
         ImgSession.require_report()
-        .filter(ImgSession.data_status.in_([INVALID_LABEL, NOT_FOUND,
-                                            UNIMELB_DARIS, FIX_XNAT]))
+        .filter(ImgSession.data_status.in_((
+            INVALID_LABEL, NOT_FOUND, UNIMELB_DARIS, FIX_XNAT,
+            FOUND_NO_CLINICAL)))
         .order_by(ImgSession.data_status.desc(), ImgSession.scan_date)).all()
+
+    new_missing_scans = (
+        ImgSession.require_report()
+        .filter_by(data_status=PRESENT)
+        .filter(~(
+            Scan.query
+            .join(ScanType)
+            .filter(
+                Scan.session_id == ImgSession.id,
+                sql.or_(~ScanType.confirmed, ScanType.clinical))
+            .exists()))
+        .order_by(ImgSession.data_status.desc(), ImgSession.scan_date)).all()
+
+    # Update status of imports that don't have any clinical scans (and all
+    # types have been confirmed)
+    for img_session in new_missing_scans:
+        img_session.data_status = FOUND_NO_CLINICAL
+
+    db.session.commit()  # pylint: disable=no-member
+
+    to_fix = new_missing_scans + to_fix
 
     if not to_fix:
         flash("There are no more sessions to repair!", "success")
@@ -279,6 +308,7 @@ def fix_sessions():
                            form_target=url_for('reporting.repair'),
                            include_status=True,
                            include_subject=True,
+                           number_of_rows=len(to_fix),
                            DATA_STATUS=DATA_STATUS)
 
 
@@ -311,24 +341,69 @@ def repair():
             if form.status.data in (PRESENT, FIX_XNAT):
                 img_session.xnat_id = form.xnat_id.data
 
-            db.session.commit()  # pylint: disable=no-member
-
+            # Check to see whether the session is missing clinically relevant
+            # scans
             edit_link = ('<a href="javascript:select_session({});">Edit</a>'
                          .format(session_id))
 
             # flash will display a message to the user
             if img_session.data_status == PRESENT:
-                flash(Markup('Repaired {}. {}'.format(session_id, edit_link)),
-                      'success')
+                # Add new scan types if required
+                if hasattr(form, 'new_scan_types'):
+                    # Delete existing scans linked to the session if present
+                    (Scan.query
+                     .filter_by(session_id=img_session.id)
+                     .delete())
+
+                    for scan_type in form.new_scan_types:
+                        try:
+                            scan_type = ScanType.query.filter_by(
+                                name=scan_type).one()
+                        except orm.exc.NoResultFound:
+                            scan_type = ScanType(scan_type)
+                            db.session.add(scan_type)  # noqa pylint: disable=no-member
+                        try:
+                            Scan.query.filter_by(session_id=img_session.id,
+                                                 type_id=scan_type.id).one()
+                        except orm.exc.NoResultFound:
+                            db.session.add(Scan(img_session, scan_type))  # noqa pylint: disable=no-member
+
+                    missing_scans = bool(
+                        Scan.query
+                        .join(ScanType)
+                        .filter(
+                            Scan.session_id == img_session.id,
+                            sql.or_(ScanType.clinical,
+                                    ~ScanType.confirmed)).count())
+                else:
+                    missing_scans = False
+
+                if missing_scans:
+                    img_session.data_status = FOUND_NO_CLINICAL
+                    flash(("{} does not contain and clinically relevant scans."
+                           " Status set to '{}', change to '{}' if this is "
+                           "expected. {}").format(
+                               img_session.xnat_id,
+                               DATA_STATUS[FOUND_NO_CLINICAL][0],
+                               DATA_STATUS[NOT_REQUIRED][0],
+                               edit_link),
+                          "warning")
+                else:
+                    flash(Markup('Repaired {}. {}'
+                                 .format(session_id, edit_link)), 'success')
             elif form.status.data != form.old_status.data:
                 flash(Markup('Marked {} as "{}". {}'.format(
                     session_id, DATA_STATUS[form.status.data][0], edit_link)),
                       'info')
             elif form.xnat_id.data != old_xnat_id:
-                flash('Updated XNAT ID of {} but didn\'t update status from '
-                      '"{}"'.format(
-                          session_id, DATA_STATUS[form.status.data][0]),
+                flash(('Updated XNAT ID of {} but didn\'t update status from '
+                       '"{}. {}"').format(
+                          session_id, DATA_STATUS[form.status.data][0],
+                          edit_link),
                       'warning')
+
+            db.session.commit()  # pylint: disable=no-member
+
             # redirect user to the 'home' method of the user module.
             return redirect(url_for('reporting.fix_sessions'))
         else:
@@ -340,7 +415,9 @@ def repair():
     return render_template("reporting/repair.html", session=img_session,
                            form=form, PRESENT=PRESENT, FIX_XNAT=FIX_XNAT,
                            FIX_OPTIONS=FIX_OPTIONS,
+                           xnat_url=app.config['SOURCE_XNAT_URL'],
                            xnat_project=form.xnat_id.data.split('_')[0],
+                           DATA_STATUS=DATA_STATUS,
                            xnat_subject='_'.join(
                                form.xnat_id.data.split('_')[:2]))
 
@@ -384,7 +461,7 @@ def confirm_scan_types():
         ScanType.query
         .filter_by(confirmed=False)
         .order_by(ScanType.name)
-        .limit(app.config['NUM_SCAN_TYPES_PER_PAGE'])).all()
+        .limit(app.config['NUM_ROWS_PER_PAGE'])).all()
 
     if not scan_types_to_view:
         flash("All scan types have been reviewed!", "success")
@@ -436,11 +513,12 @@ def import_():
                         skipped.append(row)
                         continue
                 try:
-                    project = Subject.query.filter_by(
+                    project = Project.query.filter_by(
                         mbi_id=mbi_project_id).one()
                 except orm.exc.NoResultFound:
                     project = Project(mbi_project_id)
                     db.session.add(project)  # pylint: disable=no-member
+                db.session.commit()  # pylint: disable=no-member
                 # Extract subject information from CSV row
                 mbi_subject_id = (row['SubjectID'].strip()
                                   if row['SubjectID'] is not None else '')

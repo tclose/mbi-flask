@@ -47,8 +47,19 @@
         </tr>
         <tr>
             <td class="report-label">XNAT Subject:</td>
-            <td class="report-value"><a href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}/subjects/{{xnat_subject}}?format=html"
+            <td class="report-value"><a
+                    href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}/subjects/{{xnat_subject}}?format=html"
                     target="_blank">{{ xnat_subject }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT Session:</td>
+            <td class="report-value"><a
+                    href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}/experiments/{{session.xnat_id}}?format=html"
+                    target="_blank">{{ session.xnat_id }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">Current status:</td>
+            <td class="report-value">{{ DATA_STATUS[session.data_status][1] }}</td>
         </tr>
     </tbody>
 </table>

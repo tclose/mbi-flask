@@ -34,7 +34,7 @@ FILEMAKER_EXPORT_FILE = op.join(PKG_ROOT, 'reports_status.csv')
 
 AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
 
-NUM_SCAN_TYPES_PER_PAGE = 25
+NUM_ROWS_PER_PAGE = 25
 
 UPLOADED_SIGNATURE_DEST = op.join(PKG_ROOT, 'uploads', 'signatures')
 

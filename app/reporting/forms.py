@@ -1,16 +1,18 @@
 from flask_wtf import FlaskForm
 import xnatutils
 import itertools
+from sqlalchemy import sql, orm
 from wtforms import (
     StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField, RadioField)
 from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
     DataRequired, ValidationError, Required, EqualTo, Email)
+from ..models import Scan, ImgSession, ScanType
 from ..constants import (
     CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE, DATA_STATUS, PRESENT,
     FIX_OPTIONS)
-from app import app, signature_images
+from app import app, signature_images, db
 
 
 class DivWidget():
@@ -123,13 +125,16 @@ class RepairForm(FlaskForm):
             with xnatutils.connect(
                     server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
                 try:
-                    mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
+                    exp = mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
                 except KeyError:
                     raise ValidationError(
                         "Did not find '{}' XNAT session, please correct or "
                         "select a different status (i.e. other than '{}')"
                         .format(
                             self.xnat_id.data, DATA_STATUS[PRESENT][1]))
+                else:
+                    # Update the scans listed against the XNAT session.
+                    self.new_scan_types = [s.type for s in exp.scans.values()]
 
 
 class CheckScanTypeForm(FlaskForm):

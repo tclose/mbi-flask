@@ -32,7 +32,14 @@
             "name": "Python: Import",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/run_import.py",
+            "program": "${workspaceFolder}/test/test_import.py",
+            "console": "internalConsole"
+        },
+        {
+            "name": "Python: Export",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_export.py",
             "console": "internalConsole"
         },
         {
