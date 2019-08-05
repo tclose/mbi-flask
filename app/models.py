@@ -227,7 +227,7 @@ class ImgSession(db.Model):
     def target_xnat_uri(self):
         return '{}/data/projects/{}/experiments/{}'.format(
             app.config['TARGET_XNAT_URL'], app.config['TARGET_XNAT_PROJECT'],
-            self.xnat_id)
+            self.id)
 
     @property
     def source_xnat_uri(self):
