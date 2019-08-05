@@ -134,7 +134,8 @@ class RepairForm(FlaskForm):
                             self.xnat_id.data, DATA_STATUS[PRESENT][1]))
                 else:
                     # Update the scans listed against the XNAT session.
-                    self.new_scan_types = [s.type for s in exp.scans.values()]
+                    self.new_scan_types = [(s.id, s.type)
+                                           for s in exp.scans.values()]
 
 
 class CheckScanTypeForm(FlaskForm):

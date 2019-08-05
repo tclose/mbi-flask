@@ -3,6 +3,7 @@ import os.path as op
 import os
 import re
 import json
+import shutil
 import glob
 from datetime import timedelta, datetime
 import csv
@@ -48,6 +49,10 @@ def before_request():
     g.user = None
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
+        if user is None:
+            g.user = None
+            session.pop('time_of_last_activity', None)
+            return
         logout_msg = None
         try:
             last_activity = session['time_of_last_activity']
@@ -236,7 +241,7 @@ def report():
 
     # Dynamically set form fields
     form.scans.choices = [
-        (s.id, s.type_.name) for s in img_session.scans if s.exported]
+        (s.id, str(s)) for s in img_session.scans if s.exported]
 
     if form.selected_only.data != 'true':  # From sessions page
         if form.validate_on_submit():
@@ -356,7 +361,7 @@ def repair():
                      .filter_by(session_id=img_session.id)
                      .delete())
 
-                    for scan_type in form.new_scan_types:
+                    for scan_xnat_id, scan_type in form.new_scan_types:
                         try:
                             scan_type = ScanType.query.filter_by(
                                 name=scan_type).one()
@@ -365,9 +370,10 @@ def repair():
                             db.session.add(scan_type)  # noqa pylint: disable=no-member
                         try:
                             Scan.query.filter_by(session_id=img_session.id,
-                                                 type_id=scan_type.id).one()
+                                                 xnat_id=scan_xnat_id).one()
                         except orm.exc.NoResultFound:
-                            db.session.add(Scan(img_session, scan_type))  # noqa pylint: disable=no-member
+                            db.session.add(Scan(scan_xnat_id, img_session,  # noqa pylint: disable=no-member
+                                                scan_type))
 
                     missing_scans = bool(
                         Scan.query
@@ -609,7 +615,7 @@ def import_():
                     # If the session hasn't been reported on check XNAT for
                     # matching session so we can export appropriate scans to
                     # the alfred
-                    scan_type_names = []
+                    scan_ids = []
                     if all_reports_submitted:
                         data_status = NOT_CHECKED
                     elif data_status not in (INVALID_LABEL, UNIMELB_DARIS):
@@ -620,7 +626,7 @@ def import_():
                         else:
                             try:
                                 for scan in exp.scans.values():
-                                    scan_type_names.append(scan.type)
+                                    scan_ids.append((scan.id, scan.type))
                             except XNATResponseError as e:
                                 raise Exception(
                                     "Problem reading scans of {} ({}):\n{}"
@@ -634,13 +640,14 @@ def import_():
                                          priority=LOW)
                     db.session.add(session)  # pylint: disable=no-member
                     # Add scans to session
-                    for st in scan_type_names:
+                    for scan_id, scan_type in scan_ids:
                         try:
-                            scan_type = ScanType.query.filter_by(name=st).one()
+                            scan_type = ScanType.query.filter_by(
+                                name=scan_type).one()
                         except orm.exc.NoResultFound:
-                            scan_type = ScanType(st)
+                            scan_type = ScanType(scan_type)
                             db.session.add(scan_type)  # noqa pylint: disable=no-member
-                        db.session.add(Scan(session, scan_type))  # noqa pylint: disable=no-member
+                        db.session.add(Scan(scan_id, session, scan_type))  # noqa pylint: disable=no-member
                     # Add dummy reports if existing report was stored in FM
                     if row['MrReport'] is not None and row['MrReport'].strip():
                         if 'MSH' in row['MrReport']:
@@ -674,34 +681,51 @@ def export():
     with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
         with xnat_connect(server=app.config['TARGET_XNAT_URL']) as alf_xnat:
             alf_project = alf_xnat.projects[app.config['TARGET_XNAT_PROJECT']]  # noqa pylint: disable=no-member
-            for session in ImgSession.ready_for_export():
-                mbi_session = mbi_xnat.experiments[session.xnat_id]  # noqa pylint: disable=no-member
+            for img_session in ImgSession.ready_for_export():
+                mbi_session = mbi_xnat.experiments[img_session.xnat_id]  # noqa pylint: disable=no-member
                 try:
-                    alf_subject = alf_project.subjects[session.subject.mbi_id]
+                    alf_subject = alf_project.subjects[
+                        img_session.subject.mbi_id]
                 except KeyError:
                     alf_subject = alf_xnat.classes.SubjectData(  # noqa pylint: disable=no-member
-                        label=session.subject.mbi_id, parent=alf_project)
+                        label=img_session.subject.mbi_id, parent=alf_project)
                 alf_session = alf_xnat.classes.MrSessionData(  # noqa pylint: disable=no-member
-                    label=session.id, parent=alf_subject)
-                already_exported = [
-                    s.type for s in alf_session.scans.values()]
+                    label=img_session.id, parent=alf_subject)
+                prev_exported = list(alf_session.scans.keys())
                 # Loop through clinically relevant scans that haven't been
                 # exported and export
-                for scan in session.scans:
-                    if (scan.type_.clinical and
-                            scan.type_.name not in already_exported):
-                        mbi_scan = mbi_session.scans[scan.type_.name]
-                        tmp_dir = op.join(tmp_download_dir, str(session.id))
+                for scan in img_session.scans:
+                    if scan.is_clinical and scan.xnat_id not in prev_exported:
+                        mbi_scan = mbi_session.scans[str(scan.xnat_id)]
+                        tmp_dir = op.join(tmp_download_dir,
+                                          str(img_session.id))
                         mbi_scan.download_dir(tmp_dir)
                         alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
                             id=mbi_scan.id, type=mbi_scan.type,
                             parent=alf_session)
                         resource = alf_scan.create_resource('DICOM')
-                        for fname in os.listdir(glob.glob(op.join(
+                        files_dir = glob.glob(op.join(
                             tmp_dir, '*', 'scans', '*', 'resources',
-                                'DICOM', 'files'))[0]):
-                            resource.upload(op.join(tmp_dir, fname), fname)
+                            'DICOM', 'files'))[0]
+                        for fname in os.listdir(files_dir):
+                            resource.upload(op.join(files_dir, fname), fname)
+                        mbi_checksums = _get_checksums(mbi_xnat, mbi_scan)
+                        alf_checksums = _get_checksums(alf_xnat, alf_scan)
+                        if (mbi_checksums != alf_checksums):
+                            raise Exception(
+                                "Checksums do not match for uploaded scan {} "
+                                "from {} (to {}) XNAT session".format(
+                                    mbi_scan.type, mbi_session.label,
+                                    alf_session.label))
                         scan.exported = True
                         db.session.commit()  # pylint: disable=no-member
+                        shutil.rmtree(tmp_dir)
                 # Trigger DICOM information extraction
-                alf_xnat.put(alf_session.uri + '?pullDataFromHeaders=true')
+                alf_xnat.put('/data/experiments/' + alf_session.id +  # noqa pylint: disable=no-member
+                             '?pullDataFromHeaders=true')
+
+
+def _get_checksums(login, scan):
+    files_json = login.get_json(scan.uri + '/files')['ResultSet']['Result']
+    return {r['Name']: r['digest'] for r in files_json
+            if r['Name'].endswith('.dcm')}

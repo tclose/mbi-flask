@@ -25,8 +25,9 @@
             "name": "Python: Init DB",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/database.py",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/init_db.py",
+            "console": "integratedTerminal",
+            "args": ["-p", "password"]
         },
         {
             "name": "Python: Import",

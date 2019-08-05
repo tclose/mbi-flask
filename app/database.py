@@ -109,9 +109,9 @@ def init_db(password=None):
                 datetime.strptime(scan_date, '%d/%m/%Y'),
                 data_status=status, priority=priority)
             db.session.add(img_session)  # noqa pylint: disable=no-member
-            for scan_type in random.sample(
-                    scan_types, random.randint(1, len(scan_types) - 1)):
-                db.session.add(Scan(img_session, scan_type,  # noqa pylint: disable=no-member
+            for i, scan_type in enumerate(random.sample(
+                    scan_types, random.randint(1, len(scan_types) - 1))):
+                db.session.add(Scan(i, img_session, scan_type,  # noqa pylint: disable=no-member
                                     exported=scan_type.clinical))
         db.session.commit()  # noqa pylint: disable=no-member
 

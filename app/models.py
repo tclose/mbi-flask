@@ -284,6 +284,7 @@ class Scan(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    xnat_id = db.Column(db.Integer)  # pylint: disable=no-member
     session_id = db.Column(db.Integer, db.ForeignKey('session.id'))  # noqa pylint: disable=no-member
     type_id = db.Column(db.Integer, db.ForeignKey('scantype.id'))  # noqa pylint: disable=no-member
     exported = db.Column(db.Boolean)  # noqa pylint: disable=no-member
@@ -293,13 +294,21 @@ class Scan(db.Model):
     session = db.relationship('ImgSession', back_populates='scans')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', secondary='report_scan_assoc')  # noqa pylint: disable=no-member
 
-    def __init__(self, session, type_, exported=False):
+    def __init__(self, xnat_id, session, type_, exported=False):
+        self.xnat_id = xnat_id
         self.session = session
         self.type_ = type_
         self.exported = exported
 
     def __repr__(self):
-        return "<ScanType {}>".format(self.name)
+        return "<Scan {}>".format(str(self))
+
+    def __str__(self):
+        return "[{}] {}".format(self.xnat_id, self.type_.name)
+
+    @property
+    def is_clinical(self):
+        return self.type_.clinical
 
 
 class ScanType(db.Model):
