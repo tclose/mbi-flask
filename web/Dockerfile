@@ -40,11 +40,11 @@ RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
 ARG SECRET_KEY
 ARG CSRF_SECRET_KEY
 ARG MAIL_PASSWORD
-ADD ./config.txt config.txt
+ADD ./config.template config.template
 # Add secrets to config file
-RUN echo config.txt > config.py
+RUN echo config.template > config.py
 
 
 # Launch Gunicorn
 EXPOSE 8000
-CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000", "app:app"]
+CMD ["/usr/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000", "app:app"]

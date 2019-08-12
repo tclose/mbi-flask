@@ -1,6 +1,6 @@
 version: "3"
 services:
-  mbi-flask-web:
+  web:
     build:
       context: ./web
       args:
@@ -15,7 +15,7 @@ services:
       - ./filemaker-import.csv:/filemaker-import.csv
     expose:
       - 8000
-  mbi-flask-sync-backup:
+  sync-backup:
     build: 
       context: ./sync-backup
       args:
@@ -25,7 +25,7 @@ services:
     volumes:
       - ./databases/app.db:/database.db
       - ./backups:/backups
-  mbi-flask-nginx:
+  nginx:
     build:
       context: ./nginx
       args:
@@ -34,7 +34,7 @@ services:
      - 80:80
      - 443:443
     links:
-      - mbi-flask-web
+      - web
     volumes:
       - ./certs/cert.crt:/etc/nginx/certs/cert.crt
       - ./certs/key.key:/etc/nginx/certs/key.key
