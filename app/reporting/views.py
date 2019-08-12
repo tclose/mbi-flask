@@ -490,7 +490,7 @@ def confirm_scan_types():
 
 @mod.route('/import', methods=['GET'])
 def import_():
-    export_file = app.config['FILEMAKER_EXPORT_FILE']
+    export_file = app.config['FILEMAKER_IMPORT_FILE']
     if not op.exists(export_file):
         raise Exception("Could not find an FileMaker export file at {}"
                         .format(export_file))

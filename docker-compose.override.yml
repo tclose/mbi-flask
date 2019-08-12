@@ -1,7 +1,0 @@
-version: '3'
-services:
-  mbi-flask-nginx:
-    volumes:
-      - ./certs/cert.crt:/etc/nginx/certs/cert.crt
-      - ./certs/key.key:/etc/nginx/certs/key.key
-      - ./nginx/nginx-ssl.conf:/etc/nginx/nginx.conf

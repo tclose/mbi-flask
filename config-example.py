@@ -30,7 +30,7 @@ SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
 TARGET_XNAT_URL = 'https://172.22.2.13/xnat'
 ADMIN_EMAIL = 'mbi-informatics@monash.edu'
 
-FILEMAKER_EXPORT_FILE = op.join(PKG_ROOT, 'reports_status.csv')
+FILEMAKER_IMPORT_FILE = op.join(PKG_ROOT, 'reports_status.csv')
 
 AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
 

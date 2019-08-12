@@ -1,26 +1,33 @@
-version: '3'
+version: 3
 services:
   mbi-flask-web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        SECRET_KEY: $SECRET_KEY
+        CSRF_SECRET_KEY: $CSRF_SECRET_KEY
+        MAIL_PASSWORD: $MAIL_PASSWORD
     volumes:
-      - ./data:/data
+      - ./app:/app
+      - ./databases/app.db:/database.db
+      - ./uploads:/uploads
+      - ./filemaker-import.csv:/filemaker-import.csv
     expose:
-      - "5000"
-    depends_on:
-      - xnat-db
-  mbi-flask-backup:
-    build: ./backup
+      - 8000
+  mbi-flask-sync-backup:
+    build: ./sync-backup
     environment:
       SETUP_CRON: "0 3 * * *"
     volumes:
-      - ./data:/data
+      - ./databases/app.db:/database.db
       - ./backups:/backups
   mbi-flask-nginx:
     build: ./nginx
     ports:
-     - "80:80"
-     - "443:443"
-    expose:
-     - "80"
+     - 80:80
+     - 443:443
     links:
       - mbi-flask-web
+    volumes:
+      - ./certs/cert.crt:/etc/nginx/certs/cert.crt
+      - ./certs/key.key:/etc/nginx/certs/key.key

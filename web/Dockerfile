@@ -1,32 +1,33 @@
-FROM tomcat:7-jre8-alpine
+FROM alpine:3.7
 
-MAINTAINER Tom Close <tom.g.close@gmail.com>
+LABEL maintainer="Tom Close <tom.g.close@gmail.com>"
 
-# Make directories required for XNAT
-RUN mkdir -p /data/xnat/home/config
-RUN mkdir -p /data/xnat/home/work
-RUN mkdir -p /data/xnat/archive
-RUN mkdir -p /data/xnat/prearchive
-RUN mkdir -p /data/xnat/build
-RUN mkdir -p /data/xnat/cache
-RUN mkdir -p /data/xnat/ftp
-RUN mkdir -p /data/xnat/pipeline
+# Expose Gunicorn port
+EXPOSE 8000
 
-EXPOSE 8080
-EXPOSE 8009
-RUN rm -rf $CATALINA_HOME/webapps
-VOLUME "$CATALINA_HOME/webapps"
+RUN apk add --no-cache --virtual .build-deps \
+    postfix python3-pip ruby-compass sqlite3 && \
+    apk del .build-deps
 
 # Set timezone
-ARG TIMEZONE
-RUN apk add --no-cache postgresql-client
-RUN apk add --no-cache postgresql-client tzdata
-RUN echo $TIMEZONE
-RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-RUN echo $TIMEZONE > /etc/timezone
-ENV TZ $TIMEZONE
-RUN apk del tzdata
-# && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache --virtual .build-deps tzdata && \
+    ln -snf /usr/share/zoneinfo/Australia/Melbourne /etc/localtime && \
+    echo Australia/Melbourne > /etc/timezone && \
+    apk del .build-deps
+ENV TZ Australia/Melbourne
 
-# Launch Tomcat
-CMD ["/usr/local/tomcat/bin/catalina.sh", "run"]
+WORKDIR /app
+
+# Configure app
+ARG SECRET_KEY
+ARG CSRF_SECRET_KEY
+ARG MAIL_PASSWORD
+ADD ./config.txt config.txt
+# Add secrets to config file
+RUN config.py < config.txt
+
+# Install Python dependencies
+RUN pip3 install gunicorn -r requirements.txt
+
+# Launch Gunicorn
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000"]
