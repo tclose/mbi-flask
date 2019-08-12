@@ -1,7 +1,8 @@
 import os
 import os.path as op
-from app import app
+import sys
 from json import dump
+from app import app
 from app.reporting.views import export
 
 with app.app_context() as a:

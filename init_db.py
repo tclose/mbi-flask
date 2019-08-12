@@ -2,9 +2,7 @@
 import sys
 from argparse import ArgumentParser
 import getpass
-sys.path.insert(0, 'web')
-from app.database import init_db  # noqa pylint: disable=import-error
-sys.path.pop(0)
+from app.database import init_db
 
 parser = ArgumentParser("Initialise DB for Flask app")
 parser.add_argument('--password', '-p', default=None,

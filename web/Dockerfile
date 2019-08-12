@@ -27,7 +27,7 @@ RUN apk update && apk add --no-cache --virtual .build-deps \
 
 
 # Install Python dependencies
-COPY ./requirements /requirements.txt
+COPY ./requirements.txt /requirements.txt
 RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir -r /requirements.txt
 
@@ -35,10 +35,6 @@ RUN pip3 install --upgrade pip && \
 ARG TIMEZONE
 RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
     echo $TIMEZONE > /etc/timezone
-
-COPY ./app /app
-WORKDIR /app
-
 
 # Configure app
 ARG SECRET_KEY
@@ -49,7 +45,6 @@ ADD ./config.txt config.txt
 RUN echo config.txt > config.py
 
 
-
 # Launch Gunicorn
 EXPOSE 8000
-CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000"]
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000", "app:app"]

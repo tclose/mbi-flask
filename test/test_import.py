@@ -1,9 +1,9 @@
 import os
 import os.path as op
-from app import app
 from json import dump
+import sys
+from app import app
 from app.reporting.views import import_
-from app.database import init_db
 
 # os.remove(op.join(op.dirname(__file__), 'databases', 'app.db'))
 

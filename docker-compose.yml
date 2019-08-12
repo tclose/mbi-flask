@@ -13,7 +13,6 @@ services:
       - ./databases/app.db:/database.db
       - ./uploads:/uploads
       - ./filemaker-import.csv:/filemaker-import.csv
-      - ./requirements.txt:/requirements.txt
     expose:
       - 8000
   mbi-flask-sync-backup:
