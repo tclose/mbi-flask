@@ -7,4 +7,5 @@
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-# disable all default crons
+# Run the backup at Midnight every day
+0 0 * * *  /backup.sh 2>&1 >> log.txt

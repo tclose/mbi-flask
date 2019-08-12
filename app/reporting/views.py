@@ -387,14 +387,14 @@ def repair():
 
                 if missing_scans:
                     img_session.data_status = FOUND_NO_CLINICAL
-                    flash(("{} does not contain and clinically relevant scans."
-                           " Status set to '{}', change to '{}' if this is "
-                           "expected. {}").format(
-                               img_session.xnat_id,
-                               DATA_STATUS[FOUND_NO_CLINICAL][0],
-                               DATA_STATUS[NOT_REQUIRED][0],
-                               edit_link),
-                          "warning")
+                    flash(Markup(
+                        "{} does not contain and clinically relevant scans."
+                        " Status set to '{}', change to '{}' if this is "
+                        "expected. {}").format(
+                            img_session.xnat_id,
+                            DATA_STATUS[FOUND_NO_CLINICAL][0],
+                            DATA_STATUS[NOT_REQUIRED][0],
+                            edit_link), "warning")
                 else:
                     flash(Markup('Repaired {}. {}'
                                  .format(session_id, edit_link)), 'success')
@@ -403,11 +403,11 @@ def repair():
                     session_id, DATA_STATUS[form.status.data][0], edit_link)),
                       'info')
             elif form.xnat_id.data != old_xnat_id:
-                flash(('Updated XNAT ID of {} but didn\'t update status from '
-                       '"{}. {}"').format(
-                          session_id, DATA_STATUS[form.status.data][0],
-                          edit_link),
-                      'warning')
+                flash(Markup(
+                    'Updated XNAT ID of {} but didn\'t update status from '
+                    '"{}. {}"').format(
+                        session_id, DATA_STATUS[form.status.data][0],
+                        edit_link), 'warning')
 
             db.session.commit()  # pylint: disable=no-member
 

@@ -22,14 +22,13 @@ RUN apk update && apk add --no-cache --virtual .build-deps \
       .build-deps \
       build-base \
       libffi-dev \
-      ruby-dev && \
-    rm -rf /var/cache/apk/*
+      ruby-dev
 
 
 # Install Python dependencies
 COPY ./requirements.txt /requirements.txt
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r /requirements.txt
+RUN pip3 install --upgrade pip && \    
+    pip3 install --no-cache-dir gunicorn -r /requirements.txt
 
 #  Set timezone
 ARG TIMEZONE
@@ -38,13 +37,16 @@ RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
 
 # Configure app
 ARG SECRET_KEY
-ARG CSRF_SECRET_KEY
+ARG WTF_CSRF_SECRET_KEY
 ARG MAIL_PASSWORD
 ADD ./config.template config.template
-# Add secrets to config file
-RUN echo config.template > config.py
+
+# Add secrets passed in as environment variables to config.py
+RUN  apk add --no-cache --virtual .build-deps gettext && \
+     cat config.template | envsubst > config.py && \
+    apk del .build-deps gettext
 
 
 # Launch Gunicorn
 EXPOSE 8000
-CMD ["/usr/bin/gunicorn", "-w", "4", "-b" "0.0.0.0:8000", "app:app"]
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
