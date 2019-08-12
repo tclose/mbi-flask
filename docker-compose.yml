@@ -1,28 +1,36 @@
-version: 3
+version: "3"
 services:
   mbi-flask-web:
     build:
       context: ./web
       args:
+        TIMEZONE: Australia/Melbourne
         SECRET_KEY: $SECRET_KEY
-        CSRF_SECRET_KEY: $CSRF_SECRET_KEY
+        WTF_CSRF_SECRET_KEY: $WTF_CSRF_SECRET_KEY
         MAIL_PASSWORD: $MAIL_PASSWORD
     volumes:
       - ./app:/app
       - ./databases/app.db:/database.db
       - ./uploads:/uploads
       - ./filemaker-import.csv:/filemaker-import.csv
+      - ./requirements.txt:/requirements.txt
     expose:
       - 8000
   mbi-flask-sync-backup:
-    build: ./sync-backup
+    build: 
+      context: ./sync-backup
+      args:
+        TIMEZONE: Australia/Melbourne
     environment:
       SETUP_CRON: "0 3 * * *"
     volumes:
       - ./databases/app.db:/database.db
       - ./backups:/backups
   mbi-flask-nginx:
-    build: ./nginx
+    build:
+      context: ./nginx
+      args:
+        TIMEZONE: Australia/Melbourne
     ports:
      - 80:80
      - 443:443
