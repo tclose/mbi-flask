@@ -6,8 +6,7 @@
 __pycache__
 /app/static/css
 /config.py
-/reports_status.csv
-/reports_status-reduced.csv
+/filemaker-import*.csv
 /app/static/scss/.sass-cache
 *.db
 *.db-journal

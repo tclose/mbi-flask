@@ -7,7 +7,7 @@ PKG_ROOT = op.abspath(op.dirname(__file__))
 DEBUG = False
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-SQLALCHEMY_DATABASE_URI = 'sqlite://database.db'
+SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
 
 SECRET_KEY = '$SECRET_KEY'
 

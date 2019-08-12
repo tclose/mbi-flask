@@ -21,7 +21,7 @@ def init_db(password=None):
 
     db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
     if op.exists(db_path):
-        if app.config['TEST']:
+        if app.config.get('TEST', False):
             os.remove(db_path)
         else:
             raise Exception(
@@ -35,7 +35,7 @@ def init_db(password=None):
     db.session.add(admin_role)  # noqa pylint: disable=no-member
     db.session.add(reporter_role)  # noqa pylint: disable=no-member
 
-    if not app.config['TEST']:
+    if not app.config.get('TEST', False):
         if password is None:
             raise Exception("Password is provided for production database")
         # Add administrator
