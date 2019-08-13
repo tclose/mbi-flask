@@ -6,10 +6,11 @@ PKG_ROOT = op.abspath(op.dirname(__file__))
 
 DEBUG = False
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+TEST = False
 
 SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
 
-SECRET_KEY = '$SECRET_KEY'
+SECRET_KEY = '$FLASK_SECRET_KEY'
 
 SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
 TARGET_XNAT_URL = 'https://172.22.2.13'

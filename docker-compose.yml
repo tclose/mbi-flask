@@ -5,8 +5,8 @@ services:
       context: ./web
       args:
         NPROCS: 4
-        TIMEZONE: Australia/Melbourne
-        SECRET_KEY: $SECRET_KEY
+        TIMEZONE: $TIMEZONE
+        FLASK_SECRET_KEY: $FLASK_SECRET_KEY
         WTF_CSRF_SECRET_KEY: $WTF_CSRF_SECRET_KEY
         MAIL_PASSWORD: $MAIL_PASSWORD
     volumes:
@@ -20,18 +20,20 @@ services:
     build: 
       context: ./sync
       args:
-        TIMEZONE: Australia/Melbourne
+        TIMEZONE: $TIMEZONE
         CRON: 0 1 * * *  # Run sync at 1am
     volumes:
       - ./databases/app.db:/database.db
       - ./uploads:/uploads
       - ./backups:/backups
       - ./sync-log.txt:/log.txt
+    environment:
+      - PASSPHRASE: $BACKUP_PASSPHRASE
   nginx:
     build:
       context: ./nginx
       args:
-        TIMEZONE: Australia/Melbourne
+        TIMEZONE: $TIMEZONE
     ports:
      - 80:80
      - 443:443

@@ -36,7 +36,7 @@ RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
     echo $TIMEZONE > /etc/timezone
 
 # Configure app
-ARG SECRET_KEY
+ARG FLASK_SECRET_KEY
 ARG WTF_CSRF_SECRET_KEY
 ARG MAIL_PASSWORD
 ADD ./config.template config.template

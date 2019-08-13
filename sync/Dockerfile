@@ -3,15 +3,16 @@ FROM alpine:3.9
 LABEL maintainer="Tom Close <tom.g.close@gmail.com>"
 
 # install cron, timezone and curl
-RUN apk add --update --no-cache --virtual .build-deps dcron tzdata curl && \
+RUN apk add --update --no-cache --virtual .build-deps dcron tzdata curl gnupg && \
     apk del .build-deps
+
+# Update the cipher algorithm used to AES256
+RUN echo "cipher-algo AES256" >> /root/.gnupg/gpg.conf
 
 #  Set timezone
 ARG TIMEZONE
 RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
     echo $TIMEZONE > /etc/timezone
-
-COPY crontab /etc/crontab
 
 # add the backup script
 COPY backup.sh /backup.sh
@@ -24,6 +25,7 @@ RUN chmod +x /sync.sh
 # add the restore script
 COPY restore.sh /restore.sh
 RUN chmod +x /restore.sh
+
 
 # Get the time that cron job should run from the docker-compose script
 ARG CRON
