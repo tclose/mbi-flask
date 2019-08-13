@@ -1,5 +1,14 @@
 FROM nginx:1.12-alpine-perl
 
+# Add packages
+RUN apk update && apk add --no-cache --virtual .build-deps tzdata && \
+    apk del .build-deps
+
+#  Set timezone
+ARG TIMEZONE
+RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
+    echo $TIMEZONE > /etc/timezone
+
 RUN rm /etc/nginx/conf.d/default.conf 
 
 COPY nginx.conf /etc/nginx

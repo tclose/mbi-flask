@@ -44,9 +44,10 @@ ADD ./config.template config.template
 # Add secrets passed in as environment variables to config.py
 RUN  apk add --no-cache --virtual .build-deps gettext && \
      cat config.template | envsubst > config.py && \
-    apk del .build-deps gettext
+     apk del .build-deps gettext
 
 
 # Launch Gunicorn
 EXPOSE 8000
-CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
+ARG NPROCS
+CMD ["/usr/local/bin/gunicorn", "-w", $NPROCS, "-b", "0.0.0.0:8000", "app:app"]

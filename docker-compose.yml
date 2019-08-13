@@ -4,6 +4,7 @@ services:
     build:
       context: ./web
       args:
+        NPROCS: 4
         TIMEZONE: Australia/Melbourne
         SECRET_KEY: $SECRET_KEY
         WTF_CSRF_SECRET_KEY: $WTF_CSRF_SECRET_KEY
@@ -15,17 +16,17 @@ services:
       - ./filemaker-import.csv:/filemaker-import.csv
     expose:
       - 8000
-  backup:
+  sync:
     build: 
-      context: ./backup
+      context: ./sync
       args:
         TIMEZONE: Australia/Melbourne
-    environment:
-      SETUP_CRON: "0 3 * * *"
+        CRON: 0 1 * * *  # Run sync at 1am
     volumes:
       - ./databases/app.db:/database.db
       - ./uploads:/uploads
       - ./backups:/backups
+      - ./sync-log.txt:/log.txt
   nginx:
     build:
       context: ./nginx

@@ -14,3 +14,4 @@ __pycache__
 /uploads
 /.env
 /certs
+/backups
