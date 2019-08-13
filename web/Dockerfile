@@ -2,8 +2,15 @@ FROM python:3.7.3-alpine3.9
 
 LABEL maintainer="Tom Close <tom.g.close@gmail.com>"
 
+#  Set timezone
+ARG TIMEZONE
+RUN apk add --update --no-cache --virtual .build-deps tzdata && \
+  cp /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
+  echo $TIMEZONE > /etc/timezone && \
+  apk del .build-deps
+
 # Add packages
-RUN apk update && apk add --no-cache --virtual .build-deps \
+RUN apk add --no-cache \
       py3-gunicorn \
       postfix \
       ruby-dev \
@@ -11,15 +18,13 @@ RUN apk update && apk add --no-cache --virtual .build-deps \
       ruby-dev \
       libffi-dev \
       build-base \
-      sqlite \
-      tzdata && \
+      sqlite && \
     gem install --no-document \
       listen \
       sass \
       compass \
       compass-colors && \
     apk del \
-      .build-deps \
       build-base \
       libffi-dev \
       ruby-dev
@@ -29,11 +34,6 @@ RUN apk update && apk add --no-cache --virtual .build-deps \
 COPY ./requirements.txt /requirements.txt
 RUN pip3 install --upgrade pip && \    
     pip3 install --no-cache-dir gunicorn -r /requirements.txt
-
-#  Set timezone
-ARG TIMEZONE
-RUN ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime && \
-    echo $TIMEZONE > /etc/timezone
 
 # Configure app
 ARG FLASK_SECRET_KEY
@@ -50,4 +50,4 @@ RUN  apk add --no-cache --virtual .build-deps gettext && \
 # Launch Gunicorn
 EXPOSE 8000
 ARG NPROCS
-CMD ["/usr/local/bin/gunicorn", "-w", $NPROCS, "-b", "0.0.0.0:8000", "app:app"]
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]

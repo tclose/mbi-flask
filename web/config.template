@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 
 PKG_ROOT = op.abspath(op.dirname(__file__))
 
-DEBUG = False
+DEBUG = True
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 TEST = False
 
-SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
+SQLALCHEMY_DATABASE_URI = 'sqlite:////database.db'
 
 SECRET_KEY = '$FLASK_SECRET_KEY'
 
@@ -24,7 +24,7 @@ WTF_CSRF_SECRET_KEY = '$WTF_CSRF_SECRET_KEY'
 
 ADMIN_EMAIL = 'mbi-informatics@monash.edu'
 
-FILEMAKER_IMPORT_FILE = '/filemaker_import.csv'
+FILEMAKER_IMPORT_FILE = '/filemaker-import.csv'
 
 AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
 

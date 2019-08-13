@@ -16,6 +16,8 @@ services:
       - ./filemaker-import.csv:/filemaker-import.csv
     expose:
       - 8000
+    ports:
+      - "8001:8000"
   sync:
     build: 
       context: ./sync
@@ -23,12 +25,15 @@ services:
         TIMEZONE: $TIMEZONE
         CRON: 0 1 * * *  # Run sync at 1am
     volumes:
-      - ./databases/app.db:/database.db
+      - ./databases:/databases
       - ./uploads:/uploads
       - ./backups:/backups
+      - ./overwritten:/overwritten
       - ./sync-log.txt:/log.txt
     environment:
-      - PASSPHRASE: $BACKUP_PASSPHRASE
+      - "PASSPHRASE=$BACKUP_PASSPHRASE"
+    links:
+      - web
   nginx:
     build:
       context: ./nginx

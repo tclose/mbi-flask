@@ -1,4 +1,5 @@
 import os.path as op
+import logging
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_breadcrumbs import Breadcrumbs
@@ -35,3 +36,9 @@ def shutdown_session(exception=None):
 
 from .reporting.views import mod as reportingModule  # noqa
 app.register_blueprint(reportingModule)
+
+
+# if __name__ != '__main__':
+#     gunicorn_logger = logging.getLogger('gunicorn.error')
+#     app.logger.handlers = gunicorn_logger.handlers
+#     app.logger.setLevel(gunicorn_logger.level)
