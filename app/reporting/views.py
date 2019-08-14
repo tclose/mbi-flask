@@ -8,16 +8,15 @@ from datetime import datetime
 import csv
 from tqdm import tqdm
 from flask import (
-    Blueprint, request, render_template, flash, g, session,
-    redirect, url_for, Markup)
+    Blueprint, request, render_template, flash, g, redirect, url_for, Markup)
 from sqlalchemy import sql, orm
 import xnat
-from app import db, templates_dir, static_dir, app, signature_images, mail
+from app import db, app
 from .forms import (
     ReportForm, RepairForm, CheckScanTypeForm)
 from ..views import get_user
 from ..models import (
-    Project, Subject, ImgSession, User, Report, Role, Scan, ScanType)
+    Project, Subject, ImgSession, User, Report, Scan, ScanType)
 from ..decorators import requires_login
 from ..constants import (
     LOW, NOT_RECORDED, MRI, PET, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
@@ -25,7 +24,7 @@ from ..constants import (
     INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS,
     FOUND_NO_CLINICAL, NOT_REQUIRED)
 from flask_breadcrumbs import (
-    Breadcrumbs, register_breadcrumb, default_breadcrumb_root)
+    register_breadcrumb, default_breadcrumb_root)
 from xnat.exceptions import XNATResponseError
 
 
