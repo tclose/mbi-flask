@@ -1,0 +1,2 @@
+class DatabaseAlreadyInitialisedError(Exception):
+    pass

@@ -22,7 +22,7 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///' + op.join(
 SECRET_KEY = 'a-long-arbitrary-string-of-chars'
 
 SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
-SOURCE_XNAT_URL = 'a-xnat-user'
+SOURCE_XNAT_USER = 'a-xnat-user'
 SOURCE_XNAT_PASSWORD = 'the-password'
 
 TARGET_XNAT_URL = 'https://mbi-xnat-dev.erc.monash.edu.au'

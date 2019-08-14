@@ -3,6 +3,7 @@ import sys
 from argparse import ArgumentParser
 import getpass
 from app.database import init_db
+from app.exceptions import DatabaseAlreadyInitialisedError
 
 parser = ArgumentParser("Initialise DB for Flask app")
 parser.add_argument('--password', '-p', default=None,
@@ -16,4 +17,7 @@ if args.password is None:
 else:
     password = args.password
 
-init_db(password)
+try:
+    init_db(password)
+except DatabaseAlreadyInitialisedError:
+    print("Database already initialised")

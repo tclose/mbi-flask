@@ -53,6 +53,7 @@ The following ports should be open to all IPs that need to access the app
 You will next need to create a '.env' file in the repostiory root with the
 following variables (saved as NAME=VALUE pairs on separate lines)
 
+* ADMIN_PASSWORD (password for the default admin account to init the db with)
 * FLASK_SECRET_KEY (long arbitrary string of chars used to secure the app)
 * WTF_CSRF_SECRET_KEY (long arbitrary string of chars used to secure forms)
 * BACKUP_PASSPHRASE (long arbitrary string of chars used to encrypt backups)

@@ -14,8 +14,7 @@ from .models import User, Role
 from .decorators import requires_login
 
 
-@app.before_request
-def before_request():
+def get_user():
     """
     pull user's profile from the database before every request are treated
     """
@@ -45,6 +44,11 @@ def before_request():
         else:
             g.user = user
             session['time_of_last_activity'] = datetime.now()
+
+
+@app.before_request
+def before_request():
+    get_user()
 
 
 @app.route('/login/', methods=['GET', 'POST'])
@@ -137,7 +141,7 @@ def register():
             msg = Message("New reporting registration: {}"
                           .format(form.email.data),
                           recipients=[app.config['ADMIN_EMAIL']])
-            msg.html = render_template('reporting/email/registration.html',
+            msg.html = render_template('email/registration.html',
                                        email=form.email.data)
             mail.send(msg)
             return redirect(url_for('login'))

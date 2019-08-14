@@ -27,7 +27,7 @@ patch_request_class(app)
 
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('404.html'), 404
+    return render_template('page-not-found.html'), 404
 
 
 @app.teardown_appcontext

@@ -15,6 +15,7 @@ from app.constants import (
     INVALID_LABEL)
 from app import db, app
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
+from .exceptions import DatabaseAlreadyInitialisedError
 
 
 def init_db(password=None):
@@ -24,7 +25,7 @@ def init_db(password=None):
         if app.config.get('TEST', False):
             os.remove(db_path)
         else:
-            raise Exception(
+            raise DatabaseAlreadyInitialisedError(
                 "Database has already been initialised at {}".format(db_path))
     else:
         os.makedirs(op.dirname(db_path), exist_ok=True)
@@ -43,7 +44,7 @@ def init_db(password=None):
                             "production database")
         # Add administrator
         db.session.add(User('Administrator', 'Account',  # noqa pylint: disable=no-member
-                            'manager.mbi@monash.edu',
+                            app.config['ADMIN_EMAIL'],
                             generate_password_hash(password),
                             roles=[admin_role], active=True))
     # Add dummy data to test with

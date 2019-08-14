@@ -28,7 +28,7 @@ TEMP_DOWNLOAD_DIR = '/tmp-downloads'
 WTF_CSRF_ENABLED = True
 WTF_CSRF_SECRET_KEY = '$WTF_CSRF_SECRET_KEY'
 
-ADMIN_EMAIL = 'mbi-informatics@monash.edu'
+ADMIN_EMAIL = 'manager.mbi@monash.edu'
 
 FILEMAKER_IMPORT_FILE = '/to-import/filemaker-export.csv'
 

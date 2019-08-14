@@ -46,6 +46,9 @@ RUN  apk add --no-cache --virtual .build-deps gettext && \
      cat config.template | envsubst > config.py && \
      apk del .build-deps gettext
 
+# Initialise database if required
+ARG ADMIN_PASSWORD
+RUN /app/init_db.py --password $ADMIN_PASSWORD
 
 # Launch Gunicorn
 EXPOSE 8000

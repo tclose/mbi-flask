@@ -1,22 +1,21 @@
-# import os.path as op
-# import os
-# import re
-# import json
-# import shutil
+import os.path as op
+import os
+import re
+import json
+import shutil
 import glob
-# from datetime import timedelta, datetime
+from datetime import timedelta, datetime
 import csv
 from tqdm import tqdm
 from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for, Markup)
-# from flask_mail import Message
-# from sqlalchemy import sql, orm
-# from sqlalchemy.exc import IntegrityError
+from sqlalchemy import sql, orm
 from xnatutils import connect as xnat_connect
 from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import (
     ReportForm, RepairForm, CheckScanTypeForm)
+from ..views import get_user
 from ..models import (
     Project, Subject, ImgSession, User, Report, Role, Scan, ScanType)
 from ..decorators import requires_login
@@ -35,6 +34,11 @@ default_breadcrumb_root(mod, '.')
 
 
 daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
+
+
+@mod.before_request
+def before_request():
+    get_user()
 
 
 @mod.route('/', methods=['GET'])
