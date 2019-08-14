@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import os
 import os.path as op
@@ -15,10 +16,10 @@ from app.constants import (
     INVALID_LABEL)
 from app import db, app
 from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
-from .exceptions import DatabaseAlreadyInitialisedError
+from app.exceptions import DatabaseAlreadyInitialisedError
 
 
-def init_db(password=None):
+def init(password=None):
 
     db_path = app.config['SQLALCHEMY_DATABASE_URI'][10:]
     if op.exists(db_path):
@@ -149,3 +150,33 @@ def init_db(password=None):
             roles=[reporter_role], active=False)))
 
     db.session.commit()  # noqa pylint: disable=no-member
+    return db_path
+
+
+if __name__ == '__main__':
+    ACTIONS = ['init']
+    parser = ArgumentParser("Perform actions on the Flask app database")
+    parser.add_argument('action', help="The action to perform", type=str,
+                        choices=ACTIONS)
+    parser.add_argument('--password', '-p', default=None,
+                        help="The password for the admin account")
+    args = parser.parse_args()
+
+    if args.action == 'init':
+        if args.password is None:
+            password = getpass.getpass(
+                "Please enter password for admin account "
+                "('manager.mbi@monash.edu'): ")
+        else:
+            password = args.password
+
+        try:
+            db_path = init(password)
+        except DatabaseAlreadyInitialisedError:
+            print("Database already initialised")
+        else:
+            print("Successfully initialised database at {}"
+                  .format(db_path))
+    else:
+        print("Unrecognised action '{}' can be one of {}".format(args.action,
+                                                                 ACTIONS))
