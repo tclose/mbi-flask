@@ -10,3 +10,5 @@ __pycache__
 /certs
 /backups
 /overwritten
+*.old
+

@@ -16,14 +16,6 @@ if [ ! -f /backups/$BACKUP_DATETIME.tar.gz.gpg ]; then
     exit 1;
 fi
 
-if [ -f /database.db ] || [ -d /uploads ]; then
-    read -p "Are you sure you want to overwrite database and uploads from $BACKUP_DATETIME [y/N]? " yesno
-
-    if [ "$yesno" != "y" ]; then
-        echo "Aborting restoration of $BACKUP_DATETIME backup"
-        exit 1;
-    fi
-fi
 
 # Decrypt and extract backup
 mkdir /restore-dir
@@ -32,14 +24,24 @@ cp /backups/$BACKUP_DATETIME.tar.gz.gpg tmp.tar.gz.gpg
 echo $PASSPHRASE | gpg --batch --yes --passphrase-fd 0 -d tmp.tar.gz.gpg > tmp.tar.gz
 tar -xzf tmp.tar.gz
 
-# Move database and uploads directory to 'overwritten' directory
-mv /databases/app.db /overwritten/app-$DATETIME.db
-mkdir /overwritten/uploads-$DATETIME
-mv /uploads/* /overwritten/uploads-$DATETIME/
+# Rename database and archive and remove uploads directory to make way for
+# restored databases
+if [ -f /database.db ] || [ -d /uploads ]; then
+    read -p "Are you sure you want to overwrite database and uploads from $BACKUP_DATETIME [y/N]? " yesno
+
+    if [ "$yesno" == "y" ]; then
+        mv /databases/app.db /databases/app-$DATETIME.db
+        tar czf /databases/uploads-$DATETIME.tar.gz /uploads
+        rm -r /uploads
+    else
+        echo "Aborting restoration of $BACKUP_DATETIME backup"
+        exit 1;
+    fi
+fi
 
 # Restore extracted backup to original location
 mv databases/app.db /databases/app.db
-mv uploads/* /uploads
+mv uploads /uploads
 
 # Clean up tmp dir
 cd /

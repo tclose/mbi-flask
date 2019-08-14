@@ -3,15 +3,13 @@ import xnatutils
 import itertools
 from sqlalchemy import sql, orm
 from wtforms import (
-    StringField, PasswordField, BooleanField, SelectMultipleField, widgets,
+    StringField, BooleanField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField, RadioField)
-from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import (
-    DataRequired, ValidationError, Required, EqualTo, Email)
+    DataRequired, ValidationError, Required)
 from ..models import Scan, ImgSession, ScanType
 from ..constants import (
-    CONCLUSION, PATHOLOGIES, ADMIN_ROLE, REPORTER_ROLE, DATA_STATUS, PRESENT,
-    FIX_OPTIONS)
+    CONCLUSION, PATHOLOGIES, DATA_STATUS, PRESENT, FIX_OPTIONS)
 from app import app, signature_images, db
 
 
@@ -56,43 +54,6 @@ class MultiCheckboxField(SelectMultipleField):
 class DivRadioField(RadioField):
 
     widget = DivWidget()
-
-
-class LoginForm(FlaskForm):
-    email = StringField('Email address', [Required(), Email()])
-    password = PasswordField('Password', [Required()])
-
-
-class RegisterForm(FlaskForm):
-    title = StringField('Title (e.g. Dr.)')
-    first_name = StringField('First name', [Required()])
-    last_name = StringField('Last name', [Required()])
-    middle_name = StringField('Middle name or initial (optional)')
-    suffixes = StringField('Suffixes (e.g. MBBS FRANZCR)')
-    email = StringField('Email address', [Required(), Email()])
-    password = PasswordField('Password', [Required()])
-    confirm = PasswordField('Repeat password', [
-        Required(), EqualTo('password', message='Passwords must match')])
-    role = RadioField('Requested role', [Required()], coerce=int,
-                      choices=[(REPORTER_ROLE, 'Reporter'),
-                               (ADMIN_ROLE, 'Administrator')])
-    signature = FileField(
-        "Electronic signature image (Reporters only)",
-        validators=[FileAllowed(signature_images,
-                                'JPEG, PNG and GIF images only')])
-
-    def validate_signature(self, field):
-        if self.role.data == REPORTER_ROLE and field.data is None:
-            raise ValidationError("An electronic signature must be provided "
-                                  "for reporter accounts")
-
-    def validate_title(self, field):
-        if self.role.data == REPORTER_ROLE and field.data is None:
-            raise ValidationError("A title is required for reporter users")
-
-    def validate_suffixes(self, field):
-        if self.role.data == REPORTER_ROLE and field.data is None:
-            raise ValidationError("Suffixes are required for reporter users")
 
 
 class ReportForm(FlaskForm):

@@ -29,7 +29,18 @@
         <div class="navbar-inner">
             <a class="brand" href="/reporting">Monash Biomedical Imaging</a>
             <div class="container">
-                {% block account %}{% endblock %}
+                {% if g.user %}
+                <div class="btn-group pull-right">
+                    <a class="btn btn-primary" href="#"><i class="icon-user"></i> {{ g.user.name }}</a>
+                    <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="icon-caret-down"></span></a>
+                    <ul class="dropdown-menu">
+                        <!--<li><a href="/profile"><i class="icon-pencil"></i> Account</a></li>
+                                        <li><a href="#"><i class="icon-lock"></i> Privacy</a></li>
+                                        <li class="divider"></li>-->
+                        <li><a href="/reporting/logout"><i class="icon-signout"></i> Logout</a></li>
+                    </ul>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

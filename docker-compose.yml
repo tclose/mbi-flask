@@ -5,30 +5,32 @@ services:
       context: ./web
       args:
         NPROCS: 4
-        TIMEZONE: $TIMEZONE
+        TIMEZONE: Australia/Melbourne
         FLASK_SECRET_KEY: $FLASK_SECRET_KEY
         WTF_CSRF_SECRET_KEY: $WTF_CSRF_SECRET_KEY
+        MAIL_USER: $MAIL_USER
         MAIL_PASSWORD: $MAIL_PASSWORD
+        SOURCE_XNAT_USER: $SOURCE_XNAT_USER
         SOURCE_XNAT_PASSWORD: $SOURCE_XNAT_PASSWORD
+        TARGET_XNAT_USER: $TARGET_XNAT_USER
         TARGET_XNAT_PASSWORD: $TARGET_XNAT_PASSWORD
     volumes:
       - ./app:/app
-      - ./databases/app.db:/database.db
+      - ./databases:/databases
       - ./uploads:/uploads
-      - ./to-import/filemaker-export.csv:/filemaker-export.csv
+      - ./to-import:/to-import
     expose:
       - 8000
   sync:
     build: 
       context: ./sync
       args:
-        TIMEZONE: $TIMEZONE
+        TIMEZONE: Australia/Melbourne
         CRON: 0 1 * * *  # Run sync at 1am
     volumes:
       - ./databases:/databases
       - ./uploads:/uploads
       - ./backups:/backups
-      - ./overwritten:/overwritten
     environment:
       - "PASSPHRASE=$BACKUP_PASSPHRASE"
     links:
@@ -37,12 +39,11 @@ services:
     build:
       context: ./nginx
       args:
-        TIMEZONE: $TIMEZONE
+        TIMEZONE: Australia/Melbourne
     ports:
      - 80:80
      - 443:443
     links:
       - web
     volumes:
-      - ./certs/cert.crt:/etc/nginx/certs/cert.crt
-      - ./certs/key.key:/etc/nginx/certs/key.key
+      - ./certs:/etc/nginx/certs

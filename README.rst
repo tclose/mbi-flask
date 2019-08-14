@@ -1,33 +1,84 @@
 MBI-Flask
 =========
 
-A collection of Flask apps to perform simple administration tasks such as
-receive incidental reports or serve worklists.
+A Flask web app to handle administration tasks such as registering subjects,
+receiving incidental reports from radiologists and serving DICOM worklists to
+research scanners.
 
-The structure of the applications follows the pattern described here,
-https://gist.github.com/cuibonobo/8696392
+**NOTE that all instructions assume that you are in the repository root dir.**
 
-Deployment
-----------
-
-<NOTE the following instructions assume that you are in this directory>
+Testing
+-------
 
 Before installation you will need to install the dependencies in the
 'requirements.txt' file. This is best done using ``pip3``::
 
-    $ pip3 install -r web/requirements.txt
+    $ pip3 install -r requirements.txt
 
-You will also need to compile the CSS from the Sass sources by::
+You will also need to compile the CSS from the Sass sources by using the Ruby
+package ``compass``::
 
-    $ sudo apt install ruby-compass
-    $ sudo gem install compas-colors
-    $ pushd web/app/static/scss; compass compile; popd
+    $ sudo gem install compass compass-colors
+    $ pushd app/static/scss; compass compile; popd
 
 You will need to create a copy of ``config-example.py`` called ``config.py``
 and edit it to reflect your deployment environment
 
-Now you can initialise the database by running `init_db.py`::
+Next you can initialise the database by running `init_db.py`::
 
     $ python3 init_db.py
 
+Then run the app with::
 
+    $ FLASK_APP=app flask run
+
+Then you can access the development site by goint to http:://127.0.0.1:5000 in
+your browser
+
+Deployment
+----------
+
+The app is designed to be deployed using Docker-Compose.
+
+You will need to install the latest versions of
+
+* [docker](https://www.docker.com/)
+* [docker-compose](http://docs.docker.com/compose)
+
+The following ports should be open to all IPs that need to access the app
+
+* 80 (http)
+* 443 (https)
+
+You will next need to create a '.env' file in the repostiory root with the
+following variables (saved as NAME=VALUE pairs on separate lines)
+
+* FLASK_SECRET_KEY (long arbitrary string of chars used to secure the app)
+* WTF_CSRF_SECRET_KEY (long arbitrary string of chars used to secure forms)
+* BACKUP_PASSPHRASE (long arbitrary string of chars used to encrypt backups)
+* MAIL_USER (a gmail username/password for the app to send emails from)
+* MAIL_PASSWORD (the corresponding password)
+* SOURCE_XNAT_USER (User for the MBI XNAT  with 'read-all' access)
+* SOURCE_XNAT_PASSWORD (password for source XNAT user)
+* TARGET_XNAT_USER (User for Alfred XNAT with write access to 'MBIReporting')
+* TARGET_XNAT_PASSWORD (password for target XNAT user)
+
+You will also need to obtain a SSL certificate for your machine in order to
+use https. This is typically provided by your institution or a third-party
+provider (e.g. GoDaddy). You will need to provide them with a
+certificate-signing-request, which can be generated using openssl::
+
+    $ mkdir -p certs
+    $ openssl req -new -newkey rsa:2048 -nodes -keyout certs/key.key -out certs/cert-sign-request.csr
+
+This will create a SSL key in the 'certs' directory along with the signing
+request which you should email to your SSL certificate provider. They will then
+provide you a with a cerificate (in ASCII PEM format) you must save at
+``certs/cert.crt``.
+
+After that the you should be able to bring up the app by running::
+
+    $ docker-compose up -d
+
+Then you can access the site by navigating to the server domain name or IP in
+your browser.

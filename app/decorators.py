@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import g, flash, redirect, url_for, request
 from app import app
-from ..models import Role
+from .models import Role
 
 
 def requires_login(role_id=None):
@@ -26,7 +26,7 @@ def requires_login(role_id=None):
             else:
                 accepted = True
             if not accepted:
-                return redirect(url_for('reporting.login', next=request.path))
+                return redirect(url_for('login', next=request.path))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
