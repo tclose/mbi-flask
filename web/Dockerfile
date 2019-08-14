@@ -54,4 +54,4 @@ RUN  apk add --no-cache --virtual .build-deps gettext && \
 # Launch Gunicorn
 EXPOSE 8000
 ARG NPROCS
-CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app", "--log-level=debug"]
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
