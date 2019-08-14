@@ -53,7 +53,6 @@ The following ports should be open to all IPs that need to access the app
 You will next need to create a '.env' file in the repostiory root with the
 following variables (saved as NAME=VALUE pairs on separate lines)
 
-* ADMIN_PASSWORD (password for the default admin account to init the db with)
 * FLASK_SECRET_KEY (long arbitrary string of chars used to secure the app)
 * WTF_CSRF_SECRET_KEY (long arbitrary string of chars used to secure forms)
 * BACKUP_PASSPHRASE (long arbitrary string of chars used to encrypt backups)
@@ -76,6 +75,10 @@ This will create a SSL key in the 'certs' directory along with the signing
 request which you should email to your SSL certificate provider. They will then
 provide you a with a cerificate (in ASCII PEM format) you must save at
 ``certs/cert.crt``.
+
+To initialise a new version of the database you can run::
+
+    $ docker-compose run web /app/database.py init --password <a-password>
 
 After that the you should be able to bring up the app by running::
 

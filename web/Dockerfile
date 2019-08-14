@@ -46,8 +46,6 @@ RUN  apk add --no-cache --virtual .build-deps gettext && \
      cat config.template | envsubst > config.py && \
      apk del .build-deps gettext
 
-COPY 
-
 # Launch Gunicorn
 EXPOSE 8000
 ARG NPROCS
