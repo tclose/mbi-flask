@@ -26,6 +26,8 @@ def init_db(password=None):
         else:
             raise Exception(
                 "Database has already been initialised at {}".format(db_path))
+    else:
+        os.makedirs(op.dirname(db_path), exist_ok=True)
 
     db.create_all()
 
