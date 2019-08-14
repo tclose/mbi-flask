@@ -2,10 +2,9 @@
 __pycache__
 /app/static/css
 /config.py
-/filemaker-import*.csv
+/to-import
 /app/static/scss/.sass-cache
-/databases/*.db
-/databases/*.db-journal
+/databases
 /uploads
 /.env
 /certs

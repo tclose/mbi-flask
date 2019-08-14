@@ -136,7 +136,10 @@ def register():
             signature_fname = None
         # create an user instance not yet stored in the database
         user = User(
-            name=form.name.data,
+            title=form.title.data,
+            first_name=form.first_name.data,
+            last_name=form.last_name.data,
+            middle_name=form.last_name.data,
             suffixes=form.suffixes.data,
             email=form.email.data,
             password=generate_password_hash(form.password.data),
@@ -502,7 +505,9 @@ def import_():
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
     axis = User.query.filter_by(name='AXIS Reporting').one()
-    with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+    with xnat_connect(server=app.config['SOURCE_XNAT_URL'],
+                      user=app.config['SOURCE_XNAT_USER'],
+                      password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
         with open(export_file) as f:
             rows = list(csv.DictReader(f))
             for row in tqdm(rows):
@@ -678,8 +683,13 @@ def export():
 
     os.makedirs(tmp_download_dir, exist_ok=True)
 
-    with xnat_connect(server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
-        with xnat_connect(server=app.config['TARGET_XNAT_URL']) as alf_xnat:
+    with xnat_connect(server=app.config['SOURCE_XNAT_URL'],
+                      user=app.config['SOURCE_XNAT_USER'],
+                      password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
+        with xnat_connect(server=app.config['TARGET_XNAT_URL'],
+                          user=app.config['TARGET_XNAT_USER'],
+                          password=app.config[
+                              'TARGET_XNAT_PASSWORD']) as alf_xnat:
             alf_project = alf_xnat.projects[app.config['TARGET_XNAT_PROJECT']]  # noqa pylint: disable=no-member
             for img_session in ImgSession.ready_for_export():
                 mbi_session = mbi_xnat.experiments[img_session.xnat_id]  # noqa pylint: disable=no-member

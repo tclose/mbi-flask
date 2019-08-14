@@ -13,7 +13,13 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:////database.db'
 SECRET_KEY = '$FLASK_SECRET_KEY'
 
 SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
+SOURCE_XNAT_USER = 'mbi_flask'
+SOURCE_XNAT_PASSWORD = $SOURCE_XNAT_PASSWORD
+
 TARGET_XNAT_URL = 'https://172.22.2.13'
+TARGET_XNAT_USER = 'tclose'
+TARGET_XNAT_PASSWORD = $TARGET_XNAT_PASSWORD
+
 
 TARGET_XNAT_PROJECT = 'MBIReporting'
 
@@ -24,7 +30,7 @@ WTF_CSRF_SECRET_KEY = '$WTF_CSRF_SECRET_KEY'
 
 ADMIN_EMAIL = 'mbi-informatics@monash.edu'
 
-FILEMAKER_IMPORT_FILE = '/filemaker-import.csv'
+FILEMAKER_IMPORT_FILE = '/filemaker-export.csv'
 
 AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
 

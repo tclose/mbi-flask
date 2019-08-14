@@ -37,12 +37,13 @@ def init_db(password=None):
 
     if not app.config.get('TEST', False):
         if password is None:
-            raise Exception("Password is provided for production database")
+            raise Exception("Admin password needs to be provided for "
+                            "production database")
         # Add administrator
-        db.session.add(User('Administrator', '', 'manager.mbi@monash.edu',  # noqa pylint: disable=no-member
-                        generate_password_hash(password),
-                        signature=None,
-                        roles=[admin_role], active=True))
+        db.session.add(User('Administrator', 'Account',  # noqa pylint: disable=no-member
+                            'manager.mbi@monash.edu',
+                            generate_password_hash(password),
+                            roles=[admin_role], active=True))
     # Add dummy data to test with
     else:
         scan_types = [
@@ -54,12 +55,13 @@ def init_db(password=None):
             ScanType('Shouldnt_be_shown')]
 
         db.session.add_all((  # noqa pylint: disable=no-member
-            User('Dr Thomas G. Close', 'PHD', 'tom.close@monash.edu',
-                generate_password_hash('password'),
-                roles=[reporter_role, admin_role], active=True),
-            User('Parisa Zakavi', '', 'parisa.zakavi@monash.edu',
-                generate_password_hash('password'),
-                roles=[reporter_role, admin_role], active=True)))
+            User('Thomas', 'Close', 'tom.close@monash.edu', suffixes='PHD',
+                 title='Dr.', password=generate_password_hash('password'),
+                 middle_name='G.', roles=[reporter_role, admin_role],
+                 active=True),
+            User('Parisa', 'Zakavi', 'parisa.zakavi@monash.edu',
+                 generate_password_hash('password'),
+                 roles=[reporter_role, admin_role], active=True)))
 
         subjects = []
 
@@ -128,18 +130,17 @@ def init_db(password=None):
 
     # Add historial reporters for previously reported records
     db.session.add_all((  # noqa pylint: disable=no-member
-        User('Dr. Nicholas Ferris', 'MBBS FRANZCR',
-            'nicholas.ferris@monash.edu',
+        User('Nicholas', 'Ferris', 'nicholas.ferris@monash.edu',
             generate_password_hash(
                 ''.join(random.choices(string.printable, k=50))),
-            roles=[reporter_role], active=False),
-        User('Dr. Paul Beech', 'MBBS FRANZCR FAANMS',
-            'paul.beech@monash.edu',
+            suffixes='MBBS FRANZCR', title='Dr.', roles=[reporter_role],
+            active=False),
+        User('Paul', 'Beech', 'paul.beech@monash.edu',
             generate_password_hash(
                 ''.join(random.choices(string.printable, k=50))),
+            suffixes='MBBS FRANZCR', title='Dr.',
             roles=[reporter_role], active=False),
-        User('AXIS Reporting', '',
-            's.ahern@axisdi.com.au ',
+        User('AXIS', 'Reporting', 's.ahern@axisdi.com.au ',
             generate_password_hash(
                 ''.join(random.choices(string.printable, k=50))),
             roles=[reporter_role], active=False)))

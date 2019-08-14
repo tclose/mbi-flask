@@ -20,7 +20,10 @@ class User(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    name = db.Column(db.String(50), unique=True)  # pylint: disable=no-member
+    title = db.Column(db.String(10))  # pylint: disable=no-member
+    first_name = db.Column(db.String(50))  # pylint: disable=no-member
+    last_name = db.Column(db.String(50))  # pylint: disable=no-member
+    middle_name = db.Column(db.String(50))  # pylint: disable=no-member
     suffixes = db.Column(db.String(30))  # noqa pylint: disable=no-member
     email = db.Column(db.String(120), unique=True)  # pylint: disable=no-member
     password = db.Column(db.String(120))  # pylint: disable=no-member
@@ -32,9 +35,13 @@ class User(db.Model):
     roles = db.relationship('Role',  # noqa pylint: disable=no-member
                             secondary='user_role_assoc')
 
-    def __init__(self, name, suffixes, email, password, signature=None,
+    def __init__(self, first_name, last_name, email, password,
+                 middle_name=None, suffixes=None, title=None, signature=None,
                  roles=[], active=False):
-        self.name = name
+        self.title = title
+        self.first_name = first_name
+        self.last_name = last_name
+        self.middle_name = middle_name
         self.suffixes = suffixes
         self.email = email
         self.password = password
@@ -46,8 +53,12 @@ class User(db.Model):
     def status_str(self):
         return REPORTER_STATUS[self.status]
 
+    @property
+    def name(self):
+        return '{} {}'.format(self.first_name, self.last_name)
+
     def __repr__(self):
-        return '<User {}>'.format(self.name)
+        return "<User '{}'>".format(self.name)
 
     def has_role(self, role_id):
         """

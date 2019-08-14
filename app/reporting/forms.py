@@ -64,15 +64,15 @@ class LoginForm(FlaskForm):
 
 
 class RegisterForm(FlaskForm):
-    name = StringField(
-        'Full name & title (e.g. Dr Jane E. Doe)',
-        [Required()])
-    suffixes = StringField('Suffixes (e.g. MBBS FRANZCR)', [Required()])
+    title = StringField('Title (e.g. Dr.)')
+    first_name = StringField('First name', [Required()])
+    last_name = StringField('Last name', [Required()])
+    middle_name = StringField('Middle name or initial (optional)')
+    suffixes = StringField('Suffixes (e.g. MBBS FRANZCR)')
     email = StringField('Email address', [Required(), Email()])
     password = PasswordField('Password', [Required()])
     confirm = PasswordField('Repeat password', [
-        Required(),
-        EqualTo('password', message='Passwords must match')])
+        Required(), EqualTo('password', message='Passwords must match')])
     role = RadioField('Requested role', [Required()], coerce=int,
                       choices=[(REPORTER_ROLE, 'Reporter'),
                                (ADMIN_ROLE, 'Administrator')])
@@ -85,6 +85,14 @@ class RegisterForm(FlaskForm):
         if self.role.data == REPORTER_ROLE and field.data is None:
             raise ValidationError("An electronic signature must be provided "
                                   "for reporter accounts")
+
+    def validate_title(self, field):
+        if self.role.data == REPORTER_ROLE and field.data is None:
+            raise ValidationError("A title is required for reporter users")
+
+    def validate_suffixes(self, field):
+        if self.role.data == REPORTER_ROLE and field.data is None:
+            raise ValidationError("Suffixes are required for reporter users")
 
 
 class ReportForm(FlaskForm):
@@ -123,7 +131,9 @@ class RepairForm(FlaskForm):
     def validate_xnat_id(self, field):
         if self.status.data == PRESENT:
             with xnatutils.connect(
-                    server=app.config['SOURCE_XNAT_URL']) as mbi_xnat:
+                    server=app.config['SOURCE_XNAT_URL'],
+                    user=app.config['SOURCE_XNAT_USER'],
+                    password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
                 try:
                     exp = mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
                 except KeyError:

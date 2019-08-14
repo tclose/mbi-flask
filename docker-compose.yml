@@ -9,15 +9,15 @@ services:
         FLASK_SECRET_KEY: $FLASK_SECRET_KEY
         WTF_CSRF_SECRET_KEY: $WTF_CSRF_SECRET_KEY
         MAIL_PASSWORD: $MAIL_PASSWORD
+        SOURCE_XNAT_PASSWORD: $SOURCE_XNAT_PASSWORD
+        TARGET_XNAT_PASSWORD: $TARGET_XNAT_PASSWORD
     volumes:
       - ./app:/app
       - ./databases/app.db:/database.db
       - ./uploads:/uploads
-      - ./filemaker-import.csv:/filemaker-import.csv
+      - ./to-import/filemaker-export.csv:/filemaker-export.csv
     expose:
       - 8000
-    ports:
-      - "8001:8000"
   sync:
     build: 
       context: ./sync
@@ -29,7 +29,6 @@ services:
       - ./uploads:/uploads
       - ./backups:/backups
       - ./overwritten:/overwritten
-      - ./sync-log.txt:/log.txt
     environment:
       - "PASSPHRASE=$BACKUP_PASSPHRASE"
     links:
