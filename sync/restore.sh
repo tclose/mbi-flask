@@ -45,4 +45,6 @@ mv uploads/* /uploads
 cd /
 rm -r /restore-dir
 
-echo "Successfully restored backup of database and uploads from $BACKUP_DATETIME"
+echo "Successfully restored backup of database and uploads directory from $BACKUP_DATETIME"
+echo "The overwritten database and uploads directory were moved to "
+echo "<PKG-ROOT>/overwritten/app-$DATETIME.db and <PKG-ROOT>/overwritten/uploads-$DATETIME, respectively"
