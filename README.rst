@@ -44,6 +44,7 @@ You will need to install the latest versions of
 
 * [docker](https://www.docker.com/)
 * [docker-compose](http://docs.docker.com/compose)
+* [openssl](http://openssl.org)
 
 The following ports should be open to all IPs that need to access the app
 
@@ -75,6 +76,13 @@ This will create a SSL key in the 'certs' directory along with the signing
 request which you should email to your SSL certificate provider. They will then
 provide you a with a cerificate (in ASCII PEM format) you must save at
 ``certs/cert.crt``.
+
+Alternatively, you can generate a "self-signed" certificate, which is not
+verified by a trusted 3rd party (and so is vunerable to man-in-the-middle
+attacks unless the certifcate is installed on client machines beforehand)::
+
+    $ mkdir -p certs
+    $ openssl req -newkey rsa:2048 -nodes -keyout certs/key.key -x509 -days 365 -out cert.crt
 
 To initialise a new version of the database you can run::
 
