@@ -12,6 +12,7 @@ from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import RegisterForm, LoginForm
 from .models import User, Role
 from .decorators import requires_login
+from flask_breadcrumbs import register_breadcrumb
 
 
 def get_user():
@@ -49,6 +50,15 @@ def get_user():
 @app.before_request
 def before_request():
     get_user()
+
+
+@app.route('/', methods=['GET'])
+@register_breadcrumb(app, '.', 'MBI Admin')
+@requires_login()
+def index():
+    # This should be edited to be a single jumping off page instead of
+    # redirects
+    return redirect(url_for('reporting.index'))
 
 
 @app.route('/login/', methods=['GET', 'POST'])
@@ -118,8 +128,7 @@ def register():
             db.session.commit()  # pylint: disable=no-member
         except IntegrityError as e:
             clash_field = re.match(
-                r'.*UNIQUE constraint failed: reporting_user.(.*)',
-                e.args[0]).group(1)
+                r'.*UNIQUE constraint failed: user.(.*)', e.args[0]).group(1)
             if clash_field == 'email':
                 msg = ("The email address '{}' has already been registered"
                        .format(form.email.data))
@@ -141,7 +150,7 @@ def register():
             msg = Message("New reporting registration: {}"
                           .format(form.email.data),
                           recipients=[app.config['ADMIN_EMAIL']])
-            msg.html = render_template('email/registration.html',
+            msg.html = render_template('emails/registration.html',
                                        email=form.email.data)
             mail.send(msg)
             return redirect(url_for('login'))

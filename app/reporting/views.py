@@ -11,7 +11,7 @@ from flask import (
     Blueprint, request, render_template, flash, g, session,
     redirect, url_for, Markup)
 from sqlalchemy import sql, orm
-from xnatutils import connect as xnat_connect
+import xnat
 from app import db, templates_dir, static_dir, app, signature_images, mail
 from .forms import (
     ReportForm, RepairForm, CheckScanTypeForm)
@@ -25,12 +25,12 @@ from ..constants import (
     INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS,
     FOUND_NO_CLINICAL, NOT_REQUIRED)
 from flask_breadcrumbs import (
-    Breadcrumbs,  register_breadcrumb, default_breadcrumb_root)
+    Breadcrumbs, register_breadcrumb, default_breadcrumb_root)
 from xnat.exceptions import XNATResponseError
 
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
-default_breadcrumb_root(mod, '.')
+default_breadcrumb_root(mod, '.reporting')
 
 
 daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
@@ -206,7 +206,7 @@ def repair():
 
     if img_session is None:
         raise Exception(
-            "Session corresponding to ID {} was not found".format(
+            "Session corresponding to ID '{}' was not found".format(
                 session_id))
 
     form.old_status.data = img_session.data_status
@@ -375,7 +375,7 @@ def import_():
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
     axis = User.query.filter_by(name='AXIS Reporting').one()
-    with xnat_connect(server=app.config['SOURCE_XNAT_URL'],
+    with xnat.connect(server=app.config['SOURCE_XNAT_URL'],
                       user=app.config['SOURCE_XNAT_USER'],
                       password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
         with open(export_file) as f:
@@ -553,10 +553,10 @@ def export():
 
     os.makedirs(tmp_download_dir, exist_ok=True)
 
-    with xnat_connect(server=app.config['SOURCE_XNAT_URL'],
+    with xnat.connect(server=app.config['SOURCE_XNAT_URL'],
                       user=app.config['SOURCE_XNAT_USER'],
                       password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
-        with xnat_connect(server=app.config['TARGET_XNAT_URL'],
+        with xnat.connect(server=app.config['TARGET_XNAT_URL'],
                           user=app.config['TARGET_XNAT_USER'],
                           password=app.config[
                               'TARGET_XNAT_PASSWORD']) as alf_xnat:

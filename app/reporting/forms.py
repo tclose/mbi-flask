@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-import xnatutils
+import xnat
 import itertools
 from sqlalchemy import sql, orm
 from wtforms import (
@@ -91,7 +91,7 @@ class RepairForm(FlaskForm):
 
     def validate_xnat_id(self, field):
         if self.status.data == PRESENT:
-            with xnatutils.connect(
+            with xnat.connect(
                     server=app.config['SOURCE_XNAT_URL'],
                     user=app.config['SOURCE_XNAT_USER'],
                     password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:

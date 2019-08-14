@@ -2,7 +2,7 @@ import os.path as op
 import logging
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_breadcrumbs import Breadcrumbs
+from flask_breadcrumbs import Breadcrumbs, default_breadcrumb_root
 from flask_mail import Mail
 from flask_uploads import (
     UploadSet, configure_uploads, patch_request_class)
@@ -16,6 +16,7 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 
 Breadcrumbs(app)
+default_breadcrumb_root(app, '.')
 
 mail = Mail(app)
 
