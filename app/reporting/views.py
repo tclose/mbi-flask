@@ -4,7 +4,7 @@ import re
 import json
 import shutil
 import glob
-from datetime import timedelta, datetime
+from datetime import datetime
 import csv
 from tqdm import tqdm
 from flask import (
@@ -374,7 +374,7 @@ def import_():
     nick_ferris = User.query.filter_by(
         email='nicholas.ferris@monash.edu').one()
     paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
-    axis = User.query.filter_by(name='AXIS Reporting').one()
+    axis = User.query.filter_by(email='s.ahern@axisdi.com.au').one()
     with xnat.connect(server=app.config['SOURCE_XNAT_URL'],
                       user=app.config['SOURCE_XNAT_USER'],
                       password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:

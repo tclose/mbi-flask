@@ -7,7 +7,7 @@ if [ "$status" == 200 ]; then
     echo "$(date +%Y-%m-%d_%H:%M): Import from filemaker was successful "
 else
     echo "$(date +%Y-%m-%d_%H:%M): Import from filemaker failed with status $status"
-    echo "Run `docker-compose logs web` for details.";
+    echo "Run 'docker-compose logs web' for details.";
     exit 1;
 fi
 
@@ -18,6 +18,6 @@ if [ "$status" == 200 ]; then
     echo "$(date +%Y-%m-%d_%H:%M): Export from MBI XNAT to Alfred XNAT was successful "
 else
     echo "$(date +%Y-%m-%d_%H:%M): Export from MBI XNAT to Alfred XNAT failed with status $status."
-    echo "Run `docker-compose logs web` for details.";
+    echo "Run 'docker-compose logs web' for details.";
     exit 1;
 fi

@@ -7,16 +7,19 @@ import getpass
 import random
 import string
 from datetime import datetime
-from sqlalchemy import sql, orm
-from app.models import (
+from sqlalchemy import orm
+from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
+# Ensure that the app directory is on the path
+sys.path.append(op.abspath(op.join(op.dirname(__file__), '..')))
+from app.models import (  # noqa
     Project, Subject, ImgSession, Scan, ScanType, Report,
     report_scan_assoc_table, user_role_assoc_table, User, Role)
-from app.constants import (
+from app.constants import (  # noqa
     MRI, ADMIN_ROLE, REPORTER_ROLE, LOW, MEDIUM, HIGH, PRESENT, NOT_FOUND,
     INVALID_LABEL)
-from app import db, app
-from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-module
-from app.exceptions import DatabaseAlreadyInitialisedError
+from app import db, app  # noqa
+from app.exceptions import DatabaseAlreadyInitialisedError  # noqa
+sys.path.pop()
 
 
 def init(password=None):
@@ -144,7 +147,7 @@ def init(password=None):
                 ''.join(random.choices(string.printable, k=50))),
             suffixes='MBBS FRANZCR', title='Dr.',
             roles=[reporter_role], active=False),
-        User('AXIS', 'Reporting', 's.ahern@axisdi.com.au ',
+        User('AXIS', 'Reporting', 's.ahern@axisdi.com.au',
             generate_password_hash(
                 ''.join(random.choices(string.printable, k=50))),
             roles=[reporter_role], active=False)))

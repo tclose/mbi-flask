@@ -38,7 +38,12 @@ RUN pip3 install --upgrade pip && \
 # Configure app
 ARG FLASK_SECRET_KEY
 ARG WTF_CSRF_SECRET_KEY
+ARG MAIL_USER
 ARG MAIL_PASSWORD
+ARG SOURCE_XNAT_USER
+ARG SOURCE_XNAT_PASSWORD
+ARG TARGET_XNAT_USER
+ARG TARGET_XNAT_PASSWORD
 ADD ./config.template config.template
 
 # Add secrets passed in as environment variables to config.py
@@ -49,4 +54,4 @@ RUN  apk add --no-cache --virtual .build-deps gettext && \
 # Launch Gunicorn
 EXPOSE 8000
 ARG NPROCS
-CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app"]
+CMD ["/usr/local/bin/gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app", "--log-level=debug"]
