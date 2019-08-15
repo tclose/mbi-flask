@@ -1,12 +1,10 @@
 import re
-import os.path as op
 from datetime import datetime
 from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import sql, orm
 from .constants import (
-    SESSION_PRIORITY, REPORTER_STATUS, NEW, LOW, NOT_SCANNED, EXCLUDED,
-    PRESENT)
+    SESSION_PRIORITY, REPORTER_STATUS, LOW, NOT_SCANNED, EXCLUDED, PRESENT)
 
 Base = declarative_base()
 
@@ -104,12 +102,14 @@ class Project(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)  # noqa pylint: disable=no-member
     mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+    title = db.Column(db.String(50))  # pylint: disable=no-member
 
     # Relationships
     sessions = db.relationship('ImgSession', back_populates='project')  # noqa pylint: disable=no-member
 
-    def __init__(self, mbi_id):
+    def __init__(self, mbi_id, title):
         self.mbi_id = mbi_id
+        self.title = title
 
 
 class Subject(db.Model):
@@ -126,19 +126,69 @@ class Subject(db.Model):
     mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
     first_name = db.Column(db.String(100))  # pylint: disable=no-member
     last_name = db.Column(db.String(100))  # pylint: disable=no-member
+    middle_name = db.Column(db.String(100))  # pylint: disable=no-member
+    gender = db.Column(db.Integer)  # pylint: disable=no-member
     dob = db.Column(db.Date())  # pylint: disable=no-member
+    animal_id = db.Column(db.String(100))  # pylint: disable=no-member
 
     # Relationships
     sessions = db.relationship('ImgSession', back_populates='subject')  # noqa pylint: disable=no-member
+    contact_details = db.relationship('ContactDetails', back_populates='subject')  # noqa pylint: disable=no-member
 
-    def __init__(self, mbi_id, first_name, last_name, dob):
+    def __init__(self, mbi_id, first_name, last_name, gender, dob,
+                 middle_name=None, animal_id=None):
         self.mbi_id = mbi_id
         self.first_name = first_name
         self.last_name = last_name
+        self.gender = gender
         self.dob = dob
+        self.middle_name = middle_name
+        self.animal_id = animal_id
 
     def __repr__(self):
         return '<Subject {}>'.format(self.mbi_id)
+    
+
+class ContactDetails(db.Model):
+    """
+    Basic information about the subject of the imaging session. It is
+    separated from the imaging session so that we can check for multiple
+    in a year (or other arbitrary period) and only provide the latest one.
+    """
+
+    __tablename__ = 'contact_details'
+
+    # Fields
+    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
+    date = db.Column(db.Date())  # pylint: disable=no-member
+    street = db.Column(db.String(100))  # pylint: disable=no-member
+    suburb = db.Column(db.String(100))  # pylint: disable=no-member
+    postcode = db.Column(db.String(100))  # pylint: disable=no-member
+    country = db.Column(db.String(100))  # pylint: disable=no-member
+    mobile_phone = db.Column(db.String(100))  # pylint: disable=no-member
+    work_phone = db.Column(db.String(100))  # pylint: disable=no-member
+
+    # Relationships
+    subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
+
+    def __init__(self, subject, date, street, suburb, postcode,
+                 mobile_phone, work_phone=None, country=None):
+        self.subject = subject
+        self.date = date
+        self.street = street
+        self.suburb = suburb
+        self.postcode = postcode
+        self.mobile_phone = mobile_phone
+        self.work_phone = work_phone
+        self.country = country
+
+    def __repr__(self):
+        return '<ContactDetails {} - {}>'.format(
+            self.subject.mbi_id, self.date.strftime('%d/%m/%Y'))
+
+
+
 
 
 class ImgSession(db.Model):
@@ -152,10 +202,18 @@ class ImgSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))  # noqa pylint: disable=no-member
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
-    xnat_id = db.Column(db.String(50))  # noqa pylint: disable=no-member
+    xnat_subject_id = db.Column(db.String(100))  # noqa pylint: disable=no-member
+    xnat_visit_id = db.Column(db.String(100))  # noqa pylint: disable=no-member
+    daris_code = db.Column(db.String(50))  # pylint: disable=no-member
     scan_date = db.Column(db.Date())  # pylint: disable=no-member
     priority = db.Column(db.Integer)  # pylint: disable=no-member
     data_status = db.Column(db.Integer)  # pylint: disable=no-member
+    height = db.Column(db.Float)  # pylint: disable=no-member
+    weight = db.Column(db.Float)  # pylint: disable=no-member
+    notes = db.Column(db.Text)  # pylint: disable=no-member
+    # Do these need to go in project not study?
+    study_type = db.Column(db.Integer)  # pylint: disable=no-member
+    study_region = db.Column(db.Integer)  # pylint: disable=no-member
 
     # Relationships
     project = db.relationship('Project', back_populates='sessions')  # noqa pylint: disable=no-member
@@ -164,7 +222,7 @@ class ImgSession(db.Model):
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
 
     def __init__(self, id, project, subject, xnat_id, scan_date,
-                 data_status, priority=LOW):
+                 data_status, priority=LOW, daris_code=None):
         self.id = id
         self.project = project
         self.subject = subject
@@ -172,6 +230,7 @@ class ImgSession(db.Model):
         self.scan_date = scan_date
         self.data_status = data_status
         self.priority = priority
+        self.daris_code = daris_code
 
     def __repr__(self):
         return '<Session {}>'.format(self.xnat_id)
@@ -179,6 +238,11 @@ class ImgSession(db.Model):
     @property
     def priority_str(self):
         return SESSION_PRIORITY[self.priority]
+
+    @property
+    def xnat_id(self):
+        return '{}_{}_{}'.format(self.project.mbi_id, self.xnat_subject_id,
+                                 self.xnat_visit_id)
 
     @classmethod
     def require_report(cls):

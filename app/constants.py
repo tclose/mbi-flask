@@ -1,4 +1,10 @@
-from datetime import datetime
+FEMALE = 1
+MALE = 2
+
+GENDER = {
+    FEMALE: 'female',
+    MALE: 'male'
+}
 
 INACTIVE = 0
 NEW = 1
