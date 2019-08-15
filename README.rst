@@ -53,7 +53,8 @@ The following ports should be open to all IPs that need to access the app
 * 443 (https)
 
 You will next need to create a '.env' file in the repostiory root with the
-following variables (saved as NAME=VALUE pairs on separate lines)
+following variables (saved as NAME=VALUE pairs on separate lines, see
+'env-example' for a template)
 
 * FLASK_SECRET_KEY (long arbitrary string of chars used to secure the app)
 * WTF_CSRF_SECRET_KEY (long arbitrary string of chars used to secure forms)
