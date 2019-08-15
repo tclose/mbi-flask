@@ -7,8 +7,8 @@ research scanners.
 
 **NOTE that all instructions assume that you are in the repository root dir.**
 
-Testing
--------
+Development
+-----------
 
 Before installation you will need to install the dependencies in the
 'requirements.txt' file. This is best done using ``pip3``::
@@ -34,6 +34,7 @@ Then run the app with::
 
 Then you can access the development site by goint to http:://127.0.0.1:5000 in
 your browser
+
 
 Deployment
 ----------
@@ -79,14 +80,21 @@ provide you a with a cerificate (in ASCII PEM format) you must save at
 
 Alternatively, you can generate a "self-signed" certificate, which is not
 verified by a trusted 3rd party (and so is vunerable to man-in-the-middle
-attacks unless the certifcate is installed on client machines beforehand)::
+attacks unless the certifcate is independently installed on client machines)::
 
     $ mkdir -p certs
     $ openssl req -newkey rsa:2048 -nodes -keyout certs/key.key -x509 -days 365 -out cert.crt
 
-To initialise a new version of the database you can run::
+Once these variables and certs are in place you are ready to start using
+docker-compose. To initialise the database (i.e. if not copying from a previous
+server)::
 
-    $ docker-compose run web /app/database.py init --password <a-password>
+    $ docker-compose run web /app/database.py init --password <password-for-manager-account>
+
+The CSS used by the site is defined in Sass, which needs to be compiled before
+you run it (otherwise the site will look pretty ugly)::
+
+    $ docker-compose run web /compile-sass.sh
 
 After that the you should be able to bring up the app by running::
 

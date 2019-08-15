@@ -1,38 +1,27 @@
 import os.path as op
 import os
-import re
 import json
 import shutil
 import glob
-from datetime import datetime
-import csv
-from tqdm import tqdm
 from flask import (
     Blueprint, request, render_template, flash, g, redirect, url_for, Markup)
 from sqlalchemy import sql, orm
 import xnat
 from app import db, app
-from .forms import (
-    ReportForm, RepairForm, CheckScanTypeForm)
+from .forms import ReportForm, RepairForm, CheckScanTypeForm
 from ..views import get_user
-from ..models import (
-    Project, Subject, ImgSession, User, Report, Scan, ScanType)
+from ..models import ImgSession, Report, Scan, ScanType
 from ..decorators import requires_login
 from ..constants import (
-    LOW, NOT_RECORDED, MRI, PET, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
+    MRI, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
     DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
-    INVALID_LABEL, NOT_CHECKED, CRITICAL, NONURGENT, FIX_OPTIONS,
+    INVALID_LABEL, CRITICAL, NONURGENT, FIX_OPTIONS,
     FOUND_NO_CLINICAL, NOT_REQUIRED)
-from flask_breadcrumbs import (
-    register_breadcrumb, default_breadcrumb_root)
-from xnat.exceptions import XNATResponseError
+from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.reporting')
-
-
-daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
 
 
 @mod.before_request
@@ -317,16 +306,14 @@ def confirm_scan_types():
         # Update the scans are clinically relevant
         (ScanType.query  # pylint: disable=no-member
          .filter(ScanType.id.in_(clinical_scans))
-         .update({ScanType.clinical: True}, synchronize_session=False))
+         .update({ScanType.clinical: True,
+                  ScanType.confirmed: True}, synchronize_session=False))
         # Update the scans aren't clinically relevant
         (ScanType.query  # pylint: disable=no-member
          .filter(ScanType.id.in_(viewed_scans))
          .filter(~ScanType.id.in_(clinical_scans))
-         .update({ScanType.clinical: False}, synchronize_session=False))
-        # Mark all viewed scans as confirmed
-        (ScanType.query
-         .filter(ScanType.id.in_(viewed_scans))
-         .update({ScanType.confirmed: True}, synchronize_session=False))
+         .update({ScanType.clinical: False,
+                  ScanType.confirmed: True}, synchronize_session=False))
 
         db.session.commit()  # pylint: disable=no-member
         flash("Confirmed clinical relevance of {} scan types"
@@ -360,193 +347,13 @@ def confirm_scan_types():
                                         num_unconfirmed))
 
 
-@mod.route('/import', methods=['GET'])
-def import_():
-    export_file = app.config['FILEMAKER_IMPORT_FILE']
-    if not op.exists(export_file):
-        raise Exception("Could not find an FileMaker export file at {}"
-                        .format(export_file))
-    imported = []
-    previous = []
-    skipped = []
-    # Get previous reporters
-    nick_ferris = User.query.filter_by(
-        email='nicholas.ferris@monash.edu').one()
-    paul_beech = User.query.filter_by(email='paul.beech@monash.edu').one()
-    axis = User.query.filter_by(email='s.ahern@axisdi.com.au').one()
-    with xnat.connect(server=app.config['SOURCE_XNAT_URL'],
-                      user=app.config['SOURCE_XNAT_USER'],
-                      password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
-        with open(export_file) as f:
-            rows = list(csv.DictReader(f))
-            for row in tqdm(rows):
-                data_status = PRESENT
-                # Check to see if the project ID is one of the valid types
-                mbi_project_id = row['ProjectID']
-                if mbi_project_id is None or not mbi_project_id:
-                    mbi_project_id = ''
-                    data_status = INVALID_LABEL
-                else:
-                    mbi_project_id = mbi_project_id.strip()
-                    if mbi_project_id[:3] not in ('MRH', 'MMH', 'CLF'):
-                        print("skipping {} from {}".format(row['StudyID'],
-                                                           mbi_project_id))
-                        skipped.append(row)
-                        continue
-                try:
-                    project = Project.query.filter_by(
-                        mbi_id=mbi_project_id).one()
-                except orm.exc.NoResultFound:
-                    project = Project(mbi_project_id)
-                    db.session.add(project)  # pylint: disable=no-member
-                db.session.commit()  # pylint: disable=no-member
-                # Extract subject information from CSV row
-                mbi_subject_id = (row['SubjectID'].strip()
-                                  if row['SubjectID'] is not None else '')
-                study_id = (row['StudyID'].strip()
-                            if row['StudyID'] is not None else '')
-                first_name = (row['FirstName'].strip()
-                              if row['FirstName'] is not None else '')
-                last_name = (row['LastName'].strip()
-                             if row['LastName'] is not None else '')
-                try:
-                    dob = (datetime.strptime(row['DOB'].replace('.', '/'),
-                                             '%d/%m/%Y')
-                           if row['DOB'] is not None else datetime(1, 1, 1))
-                except ValueError:
-                    raise Exception(
-                        "Could not parse date of birth of {} ({})"
-                        .format(study_id, row['DOB']))
-                # Check to see if subject is present in database already
-                # otherwise add them
-                try:
-                    subject = Subject.query.filter_by(
-                        mbi_id=mbi_subject_id).one()
-                except orm.exc.NoResultFound:
-                    subject = Subject(mbi_subject_id,
-                                      first_name, last_name, dob)
-                    db.session.add(subject)  # pylint: disable=no-member
-                # Check to see whether imaging session has previously been
-                # reported or not
-                if ImgSession.query.get(study_id) is None:
-                    # Parse scan date
-                    try:
-                        scan_date = datetime.strptime(
-                            row['ScanDate'].replace('.', '/'), '%d/%m/%Y')
-                    except ValueError:
-                        raise Exception("Could not parse scan date for {} ({})"
-                                        .format(study_id, row['ScanDate']))
-                    # Extract subject and visit ID from DARIS ID or explicit
-                    # fields
-                    if row['DarisID']:
-                        match = daris_id_re.match(row['DarisID'])
-                        if match is not None:
-                            _, subject_id, visit_id = match.groups()
-                            if visit_id is None:
-                                visit_id = '1'
-                        else:
-                            subject_id = visit_id = ''
-                            if row['DarisID'].startswith('1.5.'):
-                                data_status = UNIMELB_DARIS
-                            else:
-                                data_status = INVALID_LABEL
-                    else:
-                        try:
-                            subject_id = row['XnatSubjectID'].strip()
-                        except (KeyError, AttributeError):
-                            subject_id = ''
-                        try:
-                            visit_id = visit_id = row['XnatVisitID'].strip()
-                        except (KeyError, AttributeError):
-                            visit_id = ''
-                        if not subject_id or not visit_id:
-                            data_status = INVALID_LABEL
-                    try:
-                        subject_id = int(subject_id)
-                    except ValueError:
-                        pass
-                    else:
-                        subject_id = '{:03}'.format(subject_id)
-                    # Determine whether there are outstanding report(s) for
-                    # this session or not and what the XNAT session prefix is
-                    all_reports_submitted = bool(row['MrReport'])
-                    if mbi_project_id.startswith('MMH'):
-                        visit_prefix = 'MRPT'
-                        all_reports_submitted &= bool(row['PetReport'])
-                    else:
-                        visit_prefix = 'MR'
-                    # Get the visit part of the XNAT ID
-                    try:
-                        numeral, suffix = re.match(r'(\d+)(.*)',
-                                                   visit_id).groups()
-                        visit_id = '{}{:02}{}'.format(
-                            visit_prefix, int(numeral),
-                            (suffix if suffix is not None else ''))
-                    except (ValueError, TypeError, AttributeError):
-                        data_status = INVALID_LABEL
-                    xnat_id = '_'.join(
-                        (mbi_project_id, subject_id, visit_id)).upper()
-                    # If the session hasn't been reported on check XNAT for
-                    # matching session so we can export appropriate scans to
-                    # the alfred
-                    scan_ids = []
-                    if all_reports_submitted:
-                        data_status = NOT_CHECKED
-                    elif data_status not in (INVALID_LABEL, UNIMELB_DARIS):
-                        try:
-                            exp = mbi_xnat.experiments[xnat_id]  # noqa pylint: disable=no-member
-                        except KeyError:
-                            data_status = NOT_FOUND
-                        else:
-                            try:
-                                for scan in exp.scans.values():
-                                    scan_ids.append((scan.id, scan.type))
-                            except XNATResponseError as e:
-                                raise Exception(
-                                    "Problem reading scans of {} ({}):\n{}"
-                                    .format(study_id, xnat_id, str(e)))
-                    session = ImgSession(study_id,
-                                         project,
-                                         subject,
-                                         xnat_id,
-                                         scan_date,
-                                         data_status,
-                                         priority=LOW)
-                    db.session.add(session)  # pylint: disable=no-member
-                    # Add scans to session
-                    for scan_id, scan_type in scan_ids:
-                        try:
-                            scan_type = ScanType.query.filter_by(
-                                name=scan_type).one()
-                        except orm.exc.NoResultFound:
-                            scan_type = ScanType(scan_type)
-                            db.session.add(scan_type)  # noqa pylint: disable=no-member
-                        db.session.add(Scan(scan_id, session, scan_type))  # noqa pylint: disable=no-member
-                    # Add dummy reports if existing report was stored in FM
-                    if row['MrReport'] is not None and row['MrReport'].strip():
-                        if 'MSH' in row['MrReport']:
-                            reporter = axis
-                        else:
-                            reporter = nick_ferris
-                        db.session.add(Report(  # noqa pylint: disable=no-member
-                            session.id, reporter.id, '', NOT_RECORDED,
-                            [], MRI, date=scan_date, dummy=True))
-                    if (row['PetReport'] is not None and
-                            row['PetReport'].strip()):
-                        db.session.add(Report(  # noqa pylint: disable=no-member
-                            session.id, paul_beech.id, '', NOT_RECORDED,
-                            [], PET, date=scan_date, dummy=True))  # noqa pylint: disable=no-member
-                    db.session.commit()  # pylint: disable=no-member
-                    imported.append(study_id)
-                else:
-                    previous.append(study_id)
-    return 200, {'imported': imported,
-                 'previous': previous,
-                 'skipped': skipped}
+@mod.route('/sync-filemaker', methods=['GET'])
+def sync_filemaker():
+    return 200, {}
 
 
-@mod.route('/export', methods=['GET'])
-def export():
+@mod.route('/sync-alfred', methods=['GET'])
+def sync_alfred():
 
     tmp_download_dir = app.config['TEMP_DOWNLOAD_DIR']
 

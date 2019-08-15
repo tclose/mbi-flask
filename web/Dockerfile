@@ -35,7 +35,7 @@ COPY ./requirements.txt /requirements.txt
 RUN pip3 install --upgrade pip && \    
     pip3 install --no-cache-dir gunicorn -r /requirements.txt
 
-# Configure app
+# Add secrets passed in as environment variables to config.py
 ARG FLASK_SECRET_KEY
 ARG WTF_CSRF_SECRET_KEY
 ARG MAIL_USER
@@ -45,11 +45,13 @@ ARG SOURCE_XNAT_PASSWORD
 ARG TARGET_XNAT_USER
 ARG TARGET_XNAT_PASSWORD
 ADD ./config.template config.template
-
-# Add secrets passed in as environment variables to config.py
 RUN  apk add --no-cache --virtual .build-deps gettext && \
      cat config.template | envsubst > config.py && \
      apk del .build-deps gettext
+
+# Add script for compiling Sass code to CSS
+COPY compile-sass.sh /compile-sass.sh
+RUN chmod +x /compile-sass.sh
 
 # Launch Gunicorn
 EXPOSE 8000
