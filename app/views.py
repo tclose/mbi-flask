@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug import (  # noqa pylint: disable=no-name-in-module
     check_password_hash, generate_password_hash,
     secure_filename)
-from app import db, templates_dir, static_dir, app, signature_images, mail
+from app import db, static_dir, app, signature_images, mail
 from .forms import RegisterForm, LoginForm
 from .models import User, Role
 from .decorators import requires_login

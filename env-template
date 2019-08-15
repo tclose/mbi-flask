@@ -1,0 +1,9 @@
+FLASK_SECRET_KEY=<a-long-arbitrary-string-of-chars>
+WTF_CSRF_SECRET_KEY=<another-long-arbitrary-string-of-chars>
+BACKUP_PASSPHRASE=<yet-another-long-arbitrary-string-of-chars>
+MAIL_USER=<gmail-address>
+MAIL_PASSWORD=<gmail-password>
+SOURCE_XNAT_USER=<mbi-xnat-user-with-readall-access>
+SOURCE_XNAT_PASSWORD=<mbi-xnat-user-password>
+TARGET_XNAT_USER=<alfred-xnat-user-with-access-to-MBIReporting-project>
+TARGET_XNAT_PASSWORD=<alfred-xnat-user-password>
