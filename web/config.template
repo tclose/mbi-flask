@@ -1,0 +1,50 @@
+import os
+import os.path as op
+from datetime import datetime, timedelta
+
+PKG_ROOT = op.abspath(op.dirname(__file__))
+
+DEBUG = True
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+TEST = False
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:////databases/app.db'
+
+SECRET_KEY = '$FLASK_SECRET_KEY'
+
+SOURCE_XNAT_URL = 'https://mbi-xnat.erc.monash.edu.au'
+SOURCE_XNAT_USER = '$SOURCE_XNAT_USER'
+SOURCE_XNAT_PASSWORD = '$SOURCE_XNAT_PASSWORD'
+
+TARGET_XNAT_URL = 'http://172.22.2.13'
+TARGET_XNAT_USER = '$TARGET_XNAT_USER'
+TARGET_XNAT_PASSWORD = '$TARGET_XNAT_PASSWORD'
+
+
+TARGET_XNAT_PROJECT = 'MBIReporting'
+
+TEMP_DOWNLOAD_DIR = '/tmp-downloads'
+
+WTF_CSRF_ENABLED = True
+WTF_CSRF_SECRET_KEY = '$WTF_CSRF_SECRET_KEY'
+
+ADMIN_EMAIL = 'manager.mbi@monash.edu'
+
+FILEMAKER_IMPORT_FILE = '/to-import/filemaker-export.csv'
+
+AUTO_LOGOUT_PERIOD = timedelta(minutes=30)
+
+NUM_ROWS_PER_PAGE = 25
+
+# The number of days between sessions before a new report is required
+REPORT_INTERVAL = 365
+
+UPLOADED_SIGNATURE_DEST = '/uploads'
+
+
+MAIL_SERVER = 'smtp.gmail.com'
+MAIL_PORT = 465
+MAIL_USE_SSL = True
+MAIL_USERNAME = '$MAIL_USER'
+MAIL_PASSWORD = '$MAIL_PASSWORD'
+MAIL_DEFAULT_SENDER = ADMIN_EMAIL

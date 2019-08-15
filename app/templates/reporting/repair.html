@@ -1,0 +1,76 @@
+{% extends "reporting/base.html" %}
+{% from "forms/macros.html" import render_field %}
+{% block sub_heading %}Repair Session{% endblock %}
+{% block content %}
+
+<script>
+    function toggleidbox() {
+        if (document.getElementById("status-{{ FIX_OPTIONS.index(PRESENT) }}").checked ||
+            document.getElementById("status-{{ FIX_OPTIONS.index(FIX_XNAT) }}").checked) {
+            document.getElementById("xnat_id").disabled = '';
+        } else {
+            document.getElementById("xnat_id").disabled = 'true';
+        }
+    }
+</script>
+<label class="form">Session Details</label>
+<table class="report">
+    <tbody>
+        <tr>
+            <td class="report-label">Session (Study) ID:</td>
+            <td class="report-value">{{ session.id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Scan Date:</td>
+            <td class="report-value">{{ session.scan_date.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">First Name:</td>
+            <td class="report-value">{{ session.subject.first_name }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Last Name:</td>
+            <td class="report-value">{{ session.subject.last_name }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">Subject ID:</td>
+            <td class="report-value">{{ session.subject.mbi_id }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">DOB:</td>
+            <td class="report-value">{{ session.subject.dob.strftime('%d/%m/%Y') }}</td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT Project:</td>
+            <td class="report-value"><a href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}?format=html"
+                    target="_blank">{{ xnat_project }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT Subject:</td>
+            <td class="report-value"><a
+                    href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}/subjects/{{xnat_subject}}?format=html"
+                    target="_blank">{{ xnat_subject }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">XNAT Session:</td>
+            <td class="report-value"><a
+                    href="{{ xnat_url }}/data/archive/projects/{{xnat_project}}/experiments/{{session.xnat_id}}?format=html"
+                    target="_blank">{{ session.xnat_id }}</a></td>
+        </tr>
+        <tr>
+            <td class="report-label">Current status:</td>
+            <td class="report-value">{{ DATA_STATUS[session.data_status][1] }}</td>
+        </tr>
+    </tbody>
+</table>
+<form method="POST" action=" {{ url_for('reporting.repair') }}" class="form">
+    {{ form.csrf_token }}
+    {{ render_field(form.status, class="form-radio",
+                    onChange="toggleidbox();") }}
+    {{ render_field(form.xnat_id, class="form-input",
+                    disabled=(form.status.data not in (PRESENT, FIX_XNAT))) }}
+    {{ form.session_id() }}
+    <input type="submit" value="Update" class="button green">
+    &nbsp;&nbsp;<a href="{{ url_for('reporting.fix_sessions') }}">Cancel</a>
+</form>
+{% endblock %}

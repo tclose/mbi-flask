@@ -25,15 +25,30 @@
             "name": "Python: Init DB",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/init_db.py",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/app/database.py",
+            "console": "integratedTerminal",
+            "args": ["init", "-p", "password"]
+        },
+        {
+            "name": "Python: Import",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_import.py",
+            "console": "internalConsole"
+        },
+        {
+            "name": "Python: Export",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_export.py",
+            "console": "internalConsole"
         },
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "internalConsole"
         }     
     ]
 }

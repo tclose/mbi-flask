@@ -1,0 +1,13 @@
+{% extends "reporting/base.html" %}
+{% block content %}
+<h4>Links</h4>
+<ul>
+    {% if is_reporter %}
+    <li><a href="{{ url_for('reporting.sessions') }}">Report sessions</a></li>
+    {% endif %}
+    {% if is_admin %}
+    <li><a href="{{ url_for('reporting.fix_sessions') }}">Repair missing/mis-named sessions</a></li>
+    <li><a href="{{ url_for('reporting.confirm_scan_types') }}">Confirm clinical relevance of scan types</a></li>
+    {% endif %}
+</ul>
+{% endblock %}

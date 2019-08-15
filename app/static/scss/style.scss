@@ -70,6 +70,10 @@ div.form-checkbox {
   padding-bottom: 20px;
 }
 
+div.form-radio {
+  padding-left: 10px;
+}
+
 label.form {
   font-size: 14px;
   //display: block;
@@ -178,12 +182,22 @@ td.sessions-id {
   padding-left: 10px;
 }
 
+td.sessions-subject {
+  width: 160px;
+}
+
 td.sessions-scandate {
   width: 160px;
 }
 
 td.sessions-xnatid {
   width: 300px;
+}
+
+td.sessions-status {
+  width: 100px;
+  text-align: right;
+  padding-right: 10px;
 }
 
 td.sessions-priority-low {

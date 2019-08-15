@@ -26,7 +26,7 @@ def requires_login(role_id=None):
             else:
                 accepted = True
             if not accepted:
-                return redirect(url_for('reporting.login', next=request.path))
+                return redirect(url_for('login', next=request.path))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
