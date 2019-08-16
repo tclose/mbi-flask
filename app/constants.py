@@ -74,7 +74,8 @@ NOT_REQUIRED = 10  # A report is not required
 DATA_STATUS = {
     PRESENT: ("Present", "Updated to match valid XNAT session"),
     NOT_FOUND: ("Not found in XNAT", "Found no matching session on XNAT"),
-    NOT_SCANNED: ("Cancelled/interrupted", "Cancelled/interrupted/not-uploaded session"),
+    NOT_SCANNED: ("Cancelled/interrupted", "Cancelled/interrupted/not-uploaded"
+                  " session"),
     INVALID_LABEL: ("Invalid ID(s)", "Invalid ID(s) imported from FileMaker"),
     NOT_CHECKED: ("Not checked", "Already reported so not checked"),
     UNIMELB_DARIS: ("Unimelb DaRIS", "Stored in UniMelb DaRIS"),

@@ -147,13 +147,30 @@ class Subject(db.Model):
 
     def __repr__(self):
         return '<Subject {}>'.format(self.mbi_id)
-    
+
 
 class ContactDetails(db.Model):
     """
     Basic information about the subject of the imaging session. It is
     separated from the imaging session so that we can check for multiple
     in a year (or other arbitrary period) and only provide the latest one.
+
+    Parameters
+    ----------
+    subject : Subject
+        The subject the contact details are for
+    date : Date
+        The date the contact details were acquired
+    street : str
+        The street address, name and number
+    suburb : str
+        The suburb of the address
+    mobile_phone : str
+        A contact mobile phone number
+    work_phone : str
+        A contact work phone number
+    country : str | None
+        The country, if left None it is assumed to be Australia
     """
 
     __tablename__ = 'contact_details'
@@ -186,9 +203,6 @@ class ContactDetails(db.Model):
     def __repr__(self):
         return '<ContactDetails {} - {}>'.format(
             self.subject.mbi_id, self.date.strftime('%d/%m/%Y'))
-
-
-
 
 
 class ImgSession(db.Model):
