@@ -10,8 +10,9 @@ import xnat
 from app import db, app
 from .forms import ReportForm, RepairForm, CheckScanTypeForm
 from ..views import get_user
-from ..models import ImgSession, Report, Scan, ScanType
+from ..models import Project, ImgSession, Report, Scan, ScanType
 from ..decorators import requires_login
+from ..utils import xnat_id_re
 from ..constants import (
     MRI, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
     DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
@@ -52,11 +53,14 @@ def sessions():
     to_report = (
         ImgSession.require_report()
         .filter_by(data_status=PRESENT)
+        # Only show sessions that have exported scans
         .filter(
             Scan.query
             .filter(Scan.session_id == ImgSession.id,
                     Scan.exported)
             .exists())
+        # Don't show sessions that have unexported scans or scans of
+        # unconfirmed clinicaly relevance
         .filter(~(
             Scan.query
             .join(ScanType)
@@ -204,9 +208,28 @@ def repair():
 
             old_xnat_id = img_session.xnat_id
 
-            img_session.data_status = form.status.data
             if form.status.data in (PRESENT, FIX_XNAT):
-                img_session.xnat_id = form.xnat_id.data
+                project_id, xnat_subj_id, xnat_visit_id = xnat_id_re.match(
+                    form.xnat_id.data).groups()
+                try:
+                    project = Project.query.filter_by(mbi_id=project_id).one()
+                except orm.exc.NoResultFound:
+                    with xnat.connect(
+                        server=app.config['SOURCE_XNAT_URL'],
+                        user=app.config['SOURCE_XNAT_USER'],
+                        password=app.config['SOURCE_XNAT_PASSWORD']
+                    ) as mbi_xnat:
+                        title = mbi_xnat.projects[project_id].description
+                    project = Project(project_id, title)
+                    db.session.add(project)  # noqa pylint: disable=no-member
+                img_session.project = project
+                img_session.xnat_subject_id = xnat_subj_id
+                img_session.xnat_visit_id = xnat_visit_id
+
+            if form.status.data == PRESENT:
+                img_session.check_data_status()
+            else:
+                img_session.data_status = form.status.data
 
             # Check to see whether the session is missing clinically relevant
             # scans
@@ -215,60 +238,27 @@ def repair():
 
             # flash will display a message to the user
             if img_session.data_status == PRESENT:
-                # Add new scan types if required
-                if hasattr(form, 'new_scan_types'):
-                    # Delete existing scans linked to the session if present
-                    (Scan.query
-                     .filter_by(session_id=img_session.id)
-                     .delete())
-
-                    for scan_xnat_id, scan_type in form.new_scan_types:
-                        try:
-                            scan_type = ScanType.query.filter_by(
-                                name=scan_type).one()
-                        except orm.exc.NoResultFound:
-                            scan_type = ScanType(scan_type)
-                            db.session.add(scan_type)  # noqa pylint: disable=no-member
-                        try:
-                            Scan.query.filter_by(session_id=img_session.id,
-                                                 xnat_id=scan_xnat_id).one()
-                        except orm.exc.NoResultFound:
-                            db.session.add(Scan(scan_xnat_id, img_session,  # noqa pylint: disable=no-member
-                                                scan_type))
-
-                    missing_scans = bool(
-                        Scan.query
-                        .join(ScanType)
-                        .filter(
-                            Scan.session_id == img_session.id,
-                            sql.or_(ScanType.clinical,
-                                    ~ScanType.confirmed)).count())
-                else:
-                    missing_scans = False
-
-                if missing_scans:
-                    img_session.data_status = FOUND_NO_CLINICAL
-                    flash(Markup(
-                        "{} does not contain and clinically relevant scans."
-                        " Status set to '{}', change to '{}' if this is "
-                        "expected. {}").format(
-                            img_session.xnat_id,
-                            DATA_STATUS[FOUND_NO_CLINICAL][0],
-                            DATA_STATUS[NOT_REQUIRED][0],
-                            edit_link), "warning")
-                else:
-                    flash(Markup('Repaired {}. {}'
-                                 .format(session_id, edit_link)), 'success')
+                flash(Markup('Repaired {}. {}'.format(session_id, edit_link)),
+                      'success')
+            elif img_session.data_status == FOUND_NO_CLINICAL:
+                flash(Markup((
+                    "{} does not contain and clinically relevant scans."
+                    " Status set to '{}', change to '{}' if this is "
+                    "expected. {}").format(
+                        img_session.xnat_id,
+                        DATA_STATUS[FOUND_NO_CLINICAL][0],
+                        DATA_STATUS[NOT_REQUIRED][0],
+                        edit_link)), "warning")
             elif form.status.data != form.old_status.data:
                 flash(Markup('Marked {} as "{}". {}'.format(
                     session_id, DATA_STATUS[form.status.data][0], edit_link)),
                       'info')
             elif form.xnat_id.data != old_xnat_id:
-                flash(Markup(
+                flash(Markup((
                     'Updated XNAT ID of {} but didn\'t update status from '
                     '"{}. {}"').format(
                         session_id, DATA_STATUS[form.status.data][0],
-                        edit_link), 'warning')
+                        edit_link)), 'warning')
 
             db.session.commit()  # pylint: disable=no-member
 
@@ -359,6 +349,7 @@ def sync_alfred():
 
     os.makedirs(tmp_download_dir, exist_ok=True)
 
+    exported = set()
     with xnat.connect(server=app.config['SOURCE_XNAT_URL'],
                       user=app.config['SOURCE_XNAT_USER'],
                       password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
@@ -381,34 +372,42 @@ def sync_alfred():
                 # Loop through clinically relevant scans that haven't been
                 # exported and export
                 for scan in img_session.scans:
-                    if scan.is_clinical and scan.xnat_id not in prev_exported:
-                        mbi_scan = mbi_session.scans[str(scan.xnat_id)]
-                        tmp_dir = op.join(tmp_download_dir,
-                                          str(img_session.id))
-                        mbi_scan.download_dir(tmp_dir)
-                        alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
-                            id=mbi_scan.id, type=mbi_scan.type,
-                            parent=alf_session)
-                        resource = alf_scan.create_resource('DICOM')
-                        files_dir = glob.glob(op.join(
-                            tmp_dir, '*', 'scans', '*', 'resources',
-                            'DICOM', 'files'))[0]
-                        for fname in os.listdir(files_dir):
-                            resource.upload(op.join(files_dir, fname), fname)
-                        mbi_checksums = _get_checksums(mbi_xnat, mbi_scan)
-                        alf_checksums = _get_checksums(alf_xnat, alf_scan)
-                        if (mbi_checksums != alf_checksums):
-                            raise Exception(
-                                "Checksums do not match for uploaded scan {} "
-                                "from {} (to {}) XNAT session".format(
-                                    mbi_scan.type, mbi_session.label,
-                                    alf_session.label))
+                    if scan.is_clinical:
+                        if str(scan.xnat_id) not in prev_exported:
+                            mbi_scan = mbi_session.scans[str(scan.xnat_id)]
+                            tmp_dir = op.join(tmp_download_dir,
+                                              str(img_session.id))
+                            mbi_scan.download_dir(tmp_dir)
+                            alf_scan = alf_xnat.classes.MrScanData(  # noqa pylint: disable=no-member
+                                id=mbi_scan.id, type=mbi_scan.type,
+                                parent=alf_session)
+                            resource = alf_scan.create_resource('DICOM')
+                            files_dir = glob.glob(op.join(
+                                tmp_dir, '*', 'scans', '*', 'resources',
+                                'DICOM', 'files'))[0]
+                            for fname in os.listdir(files_dir):
+                                resource.upload(op.join(files_dir, fname),
+                                                fname)
+                            mbi_checksums = _get_checksums(mbi_xnat, mbi_scan)
+                            alf_checksums = _get_checksums(alf_xnat, alf_scan)
+                            if (mbi_checksums != alf_checksums):
+                                raise Exception(
+                                    "Checksums do not match for uploaded scan "
+                                    "{} from {} (to {}) XNAT session".format(
+                                        mbi_scan.type, mbi_session.label,
+                                        alf_session.label))
+                            shutil.rmtree(tmp_dir)
+                            exported.add(img_session)
                         scan.exported = True
                         db.session.commit()  # pylint: disable=no-member
-                        shutil.rmtree(tmp_dir)
                 # Trigger DICOM information extraction
-                alf_xnat.put('/data/experiments/' + alf_session.id +  # noqa pylint: disable=no-member
-                             '?pullDataFromHeaders=true')
+                if not app.config.get('TEST', False):
+                    alf_xnat.put('/data/experiments/' + alf_session.id +  # noqa pylint: disable=no-member
+                                '?pullDataFromHeaders=true')
+                db.session.commit()  # pylint: disable=no-member
+    flash("Successfully sync'd {} sessions with the Alfred XNAT"
+          .format(len(exported)), "success")
+    return redirect(url_for('reporting.index'))
 
 
 def _get_checksums(login, scan):

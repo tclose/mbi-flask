@@ -1,16 +1,15 @@
 from flask_wtf import FlaskForm
 import xnat
 import itertools
-from sqlalchemy import sql, orm
+from app.utils import xnat_id_re
 from wtforms import (
-    StringField, BooleanField, SelectMultipleField, widgets,
+    StringField, SelectMultipleField, widgets,
     SelectField, HiddenField, TextAreaField, RadioField)
 from wtforms.validators import (
     DataRequired, ValidationError, Required)
-from ..models import Scan, ImgSession, ScanType
 from ..constants import (
-    CONCLUSION, PATHOLOGIES, DATA_STATUS, PRESENT, FIX_OPTIONS)
-from app import app, signature_images, db
+    CONCLUSION, PATHOLOGIES, DATA_STATUS, PRESENT, FIX_OPTIONS, FIX_XNAT)
+from app import app
 
 
 class DivWidget():
@@ -91,22 +90,36 @@ class RepairForm(FlaskForm):
 
     def validate_xnat_id(self, field):
         if self.status.data == PRESENT:
+            if not xnat_id_re.match(field.data):
+                raise ValidationError(
+                    '{} does not match the MBI format for XNAT IDs '
+                    '(<PROJECTID>_<SUBJECTID>_<VISITID)'.format(field.data))
             with xnat.connect(
                     server=app.config['SOURCE_XNAT_URL'],
                     user=app.config['SOURCE_XNAT_USER'],
                     password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
                 try:
-                    exp = mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
+                    mbi_xnat.experiments[self.xnat_id.data]  # noqa pylint: disable=no-member
                 except KeyError:
                     raise ValidationError(
                         "Did not find '{}' XNAT session, please correct or "
                         "select a different status (i.e. other than '{}')"
                         .format(
                             self.xnat_id.data, DATA_STATUS[PRESENT][1]))
-                else:
-                    # Update the scans listed against the XNAT session.
-                    self.new_scan_types = [(s.id, s.type)
-                                           for s in exp.scans.values()]
+        elif self.status.data == FIX_XNAT:
+            project_id = xnat_id_re.match(self.xnat_id.data).group(1)
+            with xnat.connect(
+                    server=app.config['SOURCE_XNAT_URL'],
+                    user=app.config['SOURCE_XNAT_USER'],
+                    password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
+                try:
+                    mbi_xnat.projects[project_id]  # noqa pylint: disable=no-member
+                except KeyError:
+                    raise ValidationError(
+                        "Did not find XNAT project matching '{}'"
+                        "select a different status (i.e. other than '{}')"
+                        .format(
+                            self.xnat_id.data, DATA_STATUS[FIX_XNAT][1]))
 
 
 class CheckScanTypeForm(FlaskForm):

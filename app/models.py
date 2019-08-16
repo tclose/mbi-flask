@@ -3,8 +3,12 @@ from datetime import datetime
 from app import db, app, signature_images
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import sql, orm
+import xnat
 from .constants import (
-    SESSION_PRIORITY, REPORTER_STATUS, LOW, NOT_SCANNED, EXCLUDED, PRESENT)
+    SESSION_PRIORITY, REPORTER_STATUS, LOW, NOT_SCANNED, EXCLUDED, PRESENT,
+    UNKNOWN, FOUND_NO_CLINICAL, INVALID_LABEL, NOT_FOUND, NOT_CHECKED,
+    FIX_XNAT)
+from .utils import xnat_id_re
 
 Base = declarative_base()
 
@@ -133,7 +137,7 @@ class Subject(db.Model):
 
     # Relationships
     sessions = db.relationship('ImgSession', back_populates='subject')  # noqa pylint: disable=no-member
-    contact_details = db.relationship('ContactDetails', back_populates='subject')  # noqa pylint: disable=no-member
+    contact_infos = db.relationship('ContactInfo', back_populates='subject')  # noqa pylint: disable=no-member
 
     def __init__(self, mbi_id, first_name, last_name, gender, dob,
                  middle_name=None, animal_id=None):
@@ -149,7 +153,7 @@ class Subject(db.Model):
         return '<Subject {}>'.format(self.mbi_id)
 
 
-class ContactDetails(db.Model):
+class ContactInfo(db.Model):
     """
     Basic information about the subject of the imaging session. It is
     separated from the imaging session so that we can check for multiple
@@ -173,7 +177,7 @@ class ContactDetails(db.Model):
         The country, if left None it is assumed to be Australia
     """
 
-    __tablename__ = 'contact_details'
+    __tablename__ = 'contact_info'
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
@@ -187,10 +191,10 @@ class ContactDetails(db.Model):
     work_phone = db.Column(db.String(100))  # pylint: disable=no-member
 
     # Relationships
-    subject = db.relationship('Subject', back_populates='sessions')  # noqa pylint: disable=no-member
+    subject = db.relationship('Subject', back_populates='contact_infos')  # noqa pylint: disable=no-member
 
     def __init__(self, subject, date, street, suburb, postcode,
-                 mobile_phone, work_phone=None, country=None):
+                 mobile_phone=None, work_phone=None, country=None):
         self.subject = subject
         self.date = date
         self.street = street
@@ -201,7 +205,7 @@ class ContactDetails(db.Model):
         self.country = country
 
     def __repr__(self):
-        return '<ContactDetails {} - {}>'.format(
+        return '<ContactInfo {} - {}>'.format(
             self.subject.mbi_id, self.date.strftime('%d/%m/%Y'))
 
 
@@ -225,6 +229,8 @@ class ImgSession(db.Model):
     height = db.Column(db.Float)  # pylint: disable=no-member
     weight = db.Column(db.Float)  # pylint: disable=no-member
     notes = db.Column(db.Text)  # pylint: disable=no-member
+    old_mr_report = db.Column(db.String(100))  # pylint: disable=no-member
+    old_pet_report = db.Column(db.String(100))  # pylint: disable=no-member
     # Do these need to go in project not study?
     study_type = db.Column(db.Integer)  # pylint: disable=no-member
     study_region = db.Column(db.Integer)  # pylint: disable=no-member
@@ -235,16 +241,24 @@ class ImgSession(db.Model):
     scans = db.relationship('Scan', back_populates='session')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', back_populates='session')  # noqa pylint: disable=no-member
 
-    def __init__(self, id, project, subject, xnat_id, scan_date,
-                 data_status, priority=LOW, daris_code=None):
+    def __init__(self, id, project, subject, xnat_subject_id, xnat_visit_id,
+                 scan_date, data_status=UNKNOWN, height=None, weight=None,
+                 notes=None, priority=LOW, daris_code=None, old_mr_report=None,
+                 old_pet_report=None):
         self.id = id
         self.project = project
         self.subject = subject
-        self.xnat_id = xnat_id
+        self.xnat_subject_id = xnat_subject_id
+        self.xnat_visit_id = xnat_visit_id
         self.scan_date = scan_date
         self.data_status = data_status
+        self.height = height
+        self.weight = weight
+        self.notes = notes
         self.priority = priority
         self.daris_code = daris_code
+        self.old_mr_report = old_mr_report
+        self.old_pet_report = old_pet_report
 
     def __repr__(self):
         return '<Session {}>'.format(self.xnat_id)
@@ -255,6 +269,9 @@ class ImgSession(db.Model):
 
     @property
     def xnat_id(self):
+        if None in (self.project.mbi_id, self.xnat_subject_id,
+                    self.xnat_visit_id):
+            return None
         return '{}_{}_{}'.format(self.project.mbi_id, self.xnat_subject_id,
                                  self.xnat_visit_id)
 
@@ -324,6 +341,54 @@ class ImgSession(db.Model):
             app.config['SOURCE_XNAT_URL'], self.xnat_id.split('_')[0],
             self.xnat_id)
 
+    def check_data_status(self):
+
+        if self.data_status not in (UNKNOWN, INVALID_LABEL, NOT_FOUND,
+                                    PRESENT, NOT_CHECKED, FIX_XNAT):
+            # Won't override other data statuses
+            return
+        if self.xnat_id is None or not xnat_id_re.match(self.xnat_id):
+            self.data_status = INVALID_LABEL
+        else:
+            with xnat.connect(
+                    server=app.config['SOURCE_XNAT_URL'],
+                    user=app.config['SOURCE_XNAT_USER'],
+                    password=app.config['SOURCE_XNAT_PASSWORD']) as mbi_xnat:
+                try:
+                    exp = mbi_xnat.experiments[self.xnat_id]  # noqa pylint: disable=no-member
+                except KeyError:
+                    self.data_status = NOT_FOUND
+                else:
+                    # Delete existing scans linked to the session if present
+                    (Scan.query
+                        .filter_by(session_id=self.id)
+                        .delete())
+
+                    for xscan in exp.scans.values():
+                        try:
+                            scan_type = ScanType.query.filter_by(
+                                name=xscan.type).one()
+                        except orm.exc.NoResultFound:
+                            scan_type = ScanType(xscan.type)
+                            db.session.add(scan_type)  # noqa pylint: disable=no-member
+                        try:
+                            Scan.query.filter_by(session_id=self.id,
+                                                 xnat_id=xscan.id).one()
+                        except orm.exc.NoResultFound:
+                            scan = Scan(xscan.id, self, scan_type)  # noqa pylint: disable=no-member
+                            db.session.add(scan)  # noqa pylint: disable=no-member
+
+                        db.session.commit()  # pylint: disable=no-member
+
+                    # Check to see if all scans aren't clinically relevant
+                    if any((s.type.clinical or s.type.confirmed)
+                           for s in self.scans):
+                        self.data_status = PRESENT
+                    else:
+                        self.data_status = FOUND_NO_CLINICAL
+
+        db.session.commit()  # pylint: disable=no-member
+
 
 class Report(db.Model):
     """
@@ -379,25 +444,25 @@ class Scan(db.Model):
     exported = db.Column(db.Boolean)  # noqa pylint: disable=no-member
 
     # Relationships
-    type_ = db.relationship('ScanType', back_populates='scans')   # noqa pylint: disable=no-member
+    type = db.relationship('ScanType', back_populates='scans')   # noqa pylint: disable=no-member
     session = db.relationship('ImgSession', back_populates='scans')  # noqa pylint: disable=no-member
     reports = db.relationship('Report', secondary='report_scan_assoc')  # noqa pylint: disable=no-member
 
-    def __init__(self, xnat_id, session, type_, exported=False):
+    def __init__(self, xnat_id, session, type, exported=False):
         self.xnat_id = xnat_id
         self.session = session
-        self.type_ = type_
+        self.type = type
         self.exported = exported
 
     def __repr__(self):
         return "<Scan {}>".format(str(self))
 
     def __str__(self):
-        return "[{}] {}".format(self.xnat_id, self.type_.name)
+        return "[{}] {}".format(self.xnat_id, self.type.name)
 
     @property
     def is_clinical(self):
-        return self.type_.clinical
+        return self.type.clinical
 
 
 class ScanType(db.Model):
@@ -422,7 +487,7 @@ class ScanType(db.Model):
     confirmed = db.Column(db.Boolean)  # pylint: disable=no-member
 
     # Relationships
-    scans = db.relationship('Scan', back_populates='type_')  # noqa pylint: disable=no-member
+    scans = db.relationship('Scan', back_populates='type')  # noqa pylint: disable=no-member
 
     def __init__(self, name, confirmed=False):
         self.name = name

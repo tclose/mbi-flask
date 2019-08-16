@@ -60,6 +60,7 @@ ADMIN_ROLE = 1
 REPORTER_ROLE = 2
 
 # Session data statuses
+UNKNOWN = 0  # Unknown data status
 PRESENT = 1  # Found matching session on MBI XNAT
 NOT_FOUND = 2  # Did not find matching session on MBI-XNAT
 NOT_SCANNED = 3  # This session was never scanned
@@ -72,6 +73,7 @@ FOUND_NO_CLINICAL = 9  # The session doesn't contain any clinical scans
 NOT_REQUIRED = 10  # A report is not required
 
 DATA_STATUS = {
+    UNKNOWN: ("Unkown", "Unknown data status (run check_data_status method)"),
     PRESENT: ("Present", "Updated to match valid XNAT session"),
     NOT_FOUND: ("Not found in XNAT", "Found no matching session on XNAT"),
     NOT_SCANNED: ("Cancelled/interrupted", "Cancelled/interrupted/not-uploaded"

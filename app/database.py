@@ -17,10 +17,10 @@ from werkzeug import generate_password_hash  # noqa pylint: disable=no-name-in-m
 # Ensure that the app directory is on the path
 sys.path.append(op.abspath(op.join(op.dirname(__file__), '..')))
 from app.constants import (  # noqa
-    LOW, NOT_RECORDED, MRI, PET, REPORTER_ROLE, ADMIN_ROLE,
+    LOW, NOT_RECORDED, MRI, PET, REPORTER_ROLE, ADMIN_ROLE, MALE, FEMALE,
     PRESENT, NOT_FOUND, UNIMELB_DARIS, INVALID_LABEL, NOT_CHECKED)
 from app.models import (  # noqa
-    Project, Subject, ImgSession, Scan, ScanType, Report,
+    Project, Subject, ImgSession, Scan, ScanType, Report, ContactInfo,
     report_scan_assoc_table, user_role_assoc_table, User, Role)
 from app.constants import (  # noqa
     MRI, ADMIN_ROLE, REPORTER_ROLE, LOW, MEDIUM, HIGH, PRESENT, NOT_FOUND,
@@ -64,13 +64,6 @@ def init(password=None):
                             roles=[admin_role], active=True))
     # Add dummy data to test with
     else:
-        scan_types = [
-            ScanType('Head_t1_mprage'),
-            ScanType('Head_t2_space_sag_p2_iso'),
-            ScanType('t1_mprage_sag_p3_iso_1_ADNI'),
-            ScanType('t2_space_sag_p2_iso'),
-            ScanType('Head_No MT fl3d_axial_p2_iso'),
-            ScanType('Shouldnt_be_shown')]
 
         db.session.add_all((  # noqa pylint: disable=no-member
             User('Thomas', 'Close', 'tom.close@monash.edu', suffixes='PHD',
@@ -82,57 +75,113 @@ def init(password=None):
                  roles=[reporter_role, admin_role], active=True)))
 
         subjects = []
+        projects = {}
 
-        for mbi_id, dob, first_name, last_name in [
-            ('MSH103138', '12/03/1952', 'Bob', 'Brown'),
-            ('MSH223132', '05/12/1951', 'Sami', 'Shah'),
-            ('MSH892342', '24/08/1980', 'Bill', 'Bryson'),
-            ('MSH234234', '21/09/1993', 'Jesse', 'Jackson'),
-            ('MSH623177', '15/12/1967', 'Robert', 'Redford'),
-            ('MSH823056', '27/06/2001', 'Danny', 'DeVito'),
-            ('MSH097334', '12/03/1972', 'Boris', 'Becker'),
-            ('MSH097335', '12/03/1972', 'Charlie', 'Chaplin'),
-                ('MSH097336', '12/03/1972', 'Emilio', 'Estevez')]:
-            subj = Subject(mbi_id, first_name, last_name,
-                        datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
+        for mbi_id, title in (('MRH060', 'A project'),
+                              ('MRH017', 'Another project'),
+                              ('MRH000', 'Yet another project'),
+                              ('MRH007', 'Yet another project again'),
+                              ('SHOULDNOTBESHOWN',
+                               'Project with scans that should not be shown')):
+            project = Project(mbi_id, title)
+            projects[project.mbi_id] = project
+            db.session.add(project)  # pylint: disable=no-member
+
+        db.session.commit()  # pylint: disable=no-member
+
+        for mbi_id, dob, first_name, last_name, gender in [
+            ('MSH103138', '12/03/1952', 'Bob', 'Brown', MALE),
+            ('MSH223132', '05/12/1951', 'Sami', 'Shah', MALE),
+            ('MSH892342', '24/08/1980', 'Lindsay', 'Lohan', FEMALE),
+            ('MSH234234', '21/09/1993', 'Jesse', 'Jackson', MALE),
+            ('MSH623177', '15/12/1967', 'Robert', 'Redford', MALE),
+            ('MSH823056', '27/06/2001', 'Danny', 'DeVito', MALE),
+            ('MSH097334', '12/03/1972', 'Boris', 'Becker', MALE),
+            ('MSH097335', '12/03/1972', 'Charlie', 'Chaplin', MALE),
+            ('MSH097336', '12/03/1972', 'Emilio', 'Estevez', MALE),
+                ('MSH054613', '11/02/1983', 'Lucy', 'Liu', FEMALE)]:
+            subj = Subject(mbi_id, first_name, last_name, gender,
+                           datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
             subjects.append(subj)
             db.session.add(subj)  # pylint: disable=no-member
 
+        db.session.commit()  # pylint: disable=no-member
+
+        for (subj_id, date, street, suburb, postcode, mobile_phone, country,
+             work_phone) in [
+                (0, '28/02/2013', '16 Koornalla Cr', 'Mt Eliza', '3325',
+                 '+6141141339', None, None),
+                (0, '28/03/2013', '17 Koornalla Cr', 'Mt Eliza', '3325',
+                 '+6141141330', None, None),
+                (1, '01/01/2014', '16 Munro St', 'Curtin', '2605',
+                 '+6141141319', None, None),
+                (2, '28/09/2018', '28A Oakpark Dr', 'Chaddy', '3148',
+                 '+6141721424', None, None),
+                (3, '28/02/2019', '35 Wilpena St', 'Eden', '5050',
+                 '+6141322539', None, '+61399050100'),
+                (4, '22/02/2019', '16 Bornal Dr', 'Mt Kiza', '3312',
+                 '+6141141323', None, None),
+                (5, '21/02/2019', '10 Downing St', 'London', 'JWEF232V',
+                 '+4441141339', 'UK', None),
+                (6, '12/10/2019', '5 Waitangi Pl', 'Mt Kiwi', '5',
+                 '+62410000339', 'New Zealand', None),
+                (7, '17/11/2019', '2 Bilby St', 'Bundaburg', '4523',
+                 '+6141983428', None, None),
+                (8, '08/04/2019', '1 Wave St', 'Wollongong', '2222',
+                 '+6141123529', None, None),
+                (9, '01/06/2019', '4 Crododile Pl', 'Darwin', '7335',
+                 '+6141141339', None, None)]:
+            db.session.add(ContactInfo(subjects[subj_id],  # noqa pylint: disable=no-member
+                                       datetime.strptime(date, '%d/%m/%Y'),
+                                       street, suburb, postcode,
+                                       mobile_phone=mobile_phone,
+                                       country=country, work_phone=work_phone))
+
+        db.session.commit()  # pylint: disable=no-member
+
         img_sessions = {}
 
-        for subj_id, study_id, xnat_id, scan_date, priority, status in [
-                (0, 1231, 'MRH100_124_MR02', '10/04/2017', LOW, PRESENT),
-                (1, 1244, 'SHOULD_NOT_BE_SHOWN_NEWER_SESSION', '11/02/2018',
-                 LOW, PRESENT),
-                (1, 1254, 'SHOULD_NOT_BE_SHOWN_AS_NOT_FOUND', '12/02/2018',
-                 LOW, NOT_FOUND),
-                (2, 1366, 'MRH999_999_MR01', '11/10/2017', LOW, PRESENT),
-                (2, 1500, 'SHOULD_NOT_BE_SHOWN_PREV_REPORT', '11/5/2018', LOW,
-                 PRESENT),
-                (2, 1600, 'MRH999_999_MR99', '11/1/2019', HIGH, PRESENT),
-                (3, 3413, 'MRH088_065_MR01', '13/01/2019', MEDIUM, PRESENT),
-                (4, 4500, 'MRH112_002_MR01', '11/02/2019', LOW, PRESENT),
-                (5, 5003, 'MRH100_025_MR01', '1/08/2017', MEDIUM, PRESENT),
-                (6, 9834, 'SHOULD_NOT_BE_SHOWN_AS_NOT_EXPORTED', '10/11/2018',
-                 LOW, PRESENT),
-                (7, 9835, 'SHOULD_NOT_BE_SHOWN_AS_INVALID', '10/12/2018', LOW,
-                 INVALID_LABEL),
-                (8, 9836, 'SHOULD_NOT_BE_SHOWN_AS_NOT_PRESENT', '10/10/2018',
-                 LOW, NOT_FOUND)]:
-            project_id = xnat_id.split('_')[0]
-            try:
-                project = Project.query.filter_by(mbi_id=project_id).one()
-            except orm.exc.NoResultFound:
-                project = Project(project_id)
+        for (subj_id, study_id, project_id, xnat_subject_id, xnat_visit_id,
+             scan_date, priority, status, height, weight, daris_code,
+             notes) in [
+                (0, 1231, 'MRH060', 'C03', 'MR02', '10/04/2017', LOW, PRESENT,
+                 157.3, 73.1, None, None),
+                (1, 1244, 'SHOULDNOTBESHOWN', 'NEWERSESSION', 'MR01',
+                 '11/02/2018', LOW, PRESENT, 183.2, 90.3, None, None),
+                (1, 1254, 'SHOULDNOTBESHOWN', 'NOTFOUND', 'MR01',
+                 '12/02/2018', LOW, NOT_FOUND, None, None, None,
+                 "Scan was aborted due to claustrophobia"),
+                (2, 1366, 'MRH017', '100', 'MR01', '11/10/2017',
+                 LOW, PRESENT, None, None, None, None),
+                (2, 1500, 'SHOULDNOTBESHOWN', 'PREVREPORT', 'MR01',
+                 '11/5/2018', LOW, PRESENT, None, None, 'None', None),
+                (2, 1600, 'MRH017', '200', 'MR01', '11/1/2019',
+                 HIGH, PRESENT, None, None, '1008.2.31.1', None),
+                (3, 3413, 'MRH007', '005', 'MR01', '13/01/2019', MEDIUM,
+                 PRESENT, None, None, None, None),
+                (4, 4500, 'MRH000', '029', 'MR01', '11/02/2019',
+                 LOW, PRESENT, None, None, '1008.2.32.1.1.2', None),
+                (5, 5003, 'MRH000', '025', 'MR01', '1/08/2017', MEDIUM,
+                 PRESENT, None, None, None, None),
+                (6, 9834, 'SHOULDNOTBESHOWN', 'NOTEXPORTED', 'MR01',
+                 '10/11/2018', LOW, PRESENT, None, None, '1008.2.11.5',
+                 "There was a problem exporting to DaRIS"),
+                (7, 9835, 'SHOULDNOTBESHOWN', 'INVALID', 'MR01', '10/12/2018',
+                 LOW, INVALID_LABEL, None, None, None, None),
+                (8, 9836, 'SHOULDNOTBESHOWN', 'NOTPRESENT', 'MR01',
+                 '10/10/2018', LOW, NOT_FOUND, None, None, None, None),
+                (9, 8003, 'MRH000', '089', 'MR01', '1/08/2019', MEDIUM,
+                 PRESENT, None, None, None, None)]:
             img_session = img_sessions[study_id] = ImgSession(
-                study_id, project, subjects[subj_id], xnat_id,
+                study_id, projects[project_id], subjects[subj_id],
+                xnat_subject_id, xnat_visit_id,
                 datetime.strptime(scan_date, '%d/%m/%Y'),
-                data_status=status, priority=priority)
+                data_status=status, priority=priority,
+                height=height, weight=weight, daris_code=daris_code,
+                notes=notes)
             db.session.add(img_session)  # noqa pylint: disable=no-member
-            for i, scan_type in enumerate(random.sample(
-                    scan_types, random.randint(1, len(scan_types) - 1))):
-                db.session.add(Scan(i, img_session, scan_type,  # noqa pylint: disable=no-member
-                                    exported=scan_type.clinical))
+            if status == PRESENT:
+                img_session.check_data_status()
         db.session.commit()  # noqa pylint: disable=no-member
 
         # Add report for 1366
@@ -140,9 +189,9 @@ def init(password=None):
         db.session.add(Report(img_session.id, 1, "Nothing to report", 0,  # noqa pylint: disable=no-member
                             used_scans=img_session.scans, modality=MRI))
 
-        # Set the final scan of the final session to be not-exported, so it
-        # shouldn't show up
-        img_sessions[9834].scans[-1].exported = False
+        # # Set the final scan of the final session to be not-exported, so it
+        # # shouldn't show up
+        # img_sessions[9834].scans[-1].exported = False
 
         db.session.commit()  # noqa pylint: disable=no-member
 

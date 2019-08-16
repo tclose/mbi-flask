@@ -53,7 +53,7 @@ def before_request():
 
 
 @app.route('/', methods=['GET'])
-@register_breadcrumb(app, '.', 'MBI Admin')
+@register_breadcrumb(app, '.', 'MBI Subjects DB')
 @requires_login()
 def index():
     # This should be edited to be a single jumping off page instead of
