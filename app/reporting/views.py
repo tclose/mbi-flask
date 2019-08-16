@@ -2,6 +2,7 @@ import os.path as op
 import os
 import json
 import shutil
+from lxml import etree
 import glob
 from flask import (
     Blueprint, request, render_template, flash, g, redirect, url_for, Markup)
@@ -23,6 +24,8 @@ from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.reporting')
+
+FM = '{http://www.filemaker.com/fmpxmlresult}'
 
 
 @mod.before_request
@@ -339,7 +342,18 @@ def confirm_scan_types():
 
 @mod.route('/sync-filemaker', methods=['GET'])
 def sync_filemaker():
+    project_data = parse_fm_export_file('project.xml')
     return 200, {}
+
+
+
+def parse_fm_export_file(fname):
+    with open(op.join(app.config['FILEMAKER_EXPORT_DIR'], fname)) as f:
+        tree = etree.parse(f).getroot()
+    fields = tree.findall(FM + 'METADATA')[0].findall(FM + 'FIELD')
+    rows = tree.findall(FM + 'RESULTSET')[0].findall(FM + 'ROW')
+    data = {}
+    
 
 
 @mod.route('/sync-alfred', methods=['GET'])
