@@ -84,7 +84,7 @@ verified by a trusted 3rd party (and so is vunerable to man-in-the-middle
 attacks unless the certifcate is independently installed on client machines)::
 
     $ mkdir -p certs
-    $ openssl req -newkey rsa:2048 -nodes -keyout certs/key.key -x509 -days 365 -out cert.crt
+    $ openssl req -newkey rsa:2048 -nodes -keyout certs/key.key -x509 -days 365 -out certs/cert.crt
 
 Once these variables and certs are in place you are ready to start using
 docker-compose. To initialise the database (i.e. if not copying from a previous
@@ -97,9 +97,13 @@ you run it (otherwise the site will look pretty ugly)::
 
     $ docker-compose run web /compile-sass.sh
 
+
 After that the you should be able to bring up the app by running::
 
     $ docker-compose up -d
 
 Then you can access the site by navigating to the server domain name or IP in
 your browser.
+
+Last, but definitely not least! Nightly backups of the database will be encrypted and
+saved in the 'backups' directory. This should be symlinked to a share on a different machine.

@@ -362,13 +362,13 @@ if __name__ == '__main__':
     parser = ArgumentParser("Perform actions on the Flask app database")
     parser.add_argument('action', help="The action to perform", type=str,
                         choices=ACTIONS)
-    args = parser.parse_args()
+    args = parser.parse_args(sys.argv[1:2])
 
     if args.action == 'init':
         init_parser = ArgumentParser("Initialise the database")
         init_parser.add_argument('--password', '-p', default=None,
                                  help="The password for the admin account")
-        init_args = init_parser.parse_args(sys.argv[1:])
+        init_args = init_parser.parse_args(sys.argv[2:])
         if init_args.password is None:
             password = getpass.getpass(
                 "Please enter password for admin account "
@@ -387,7 +387,7 @@ if __name__ == '__main__':
         import_parser = ArgumentParser("Initialise the database")
         import_parser.add_argument('export_file',
                                    help="The exported file from filemaker")
-        import_args = import_parser.parse_args(sys.argv[1:])
+        import_args = import_parser.parse_args(sys.argv[2:])
 
         initial_import(import_args.export_file)
     else:
