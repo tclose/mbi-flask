@@ -127,7 +127,7 @@ class Subject(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+    mbi_id = db.Column(db.String(20), unique=True)  # noqa pylint: disable=no-member
     first_name = db.Column(db.String(100))  # pylint: disable=no-member
     last_name = db.Column(db.String(100))  # pylint: disable=no-member
     middle_name = db.Column(db.String(100))  # pylint: disable=no-member
@@ -178,6 +178,8 @@ class ContactInfo(db.Model):
     """
 
     __tablename__ = 'contact_info'
+    __table_args__ = (
+        db.UniqueConstraint('subject_id', 'date', name='unique_subject_date'),)  # noqa pylint: disable=no-member
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member

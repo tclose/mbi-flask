@@ -30,10 +30,10 @@
             "args": ["init", "-p", "password"]
         },
         {
-            "name": "Python: Import",
+            "name": "Python: FM Sync",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/test/test_import.py",
+            "program": "${workspaceFolder}/test/test_fm_sync.py",
             "console": "internalConsole"
         },
         {

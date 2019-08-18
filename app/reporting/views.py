@@ -1,8 +1,11 @@
 import os.path as op
 import os
+import re
 import json
 import shutil
+from datetime import datetime
 from lxml import etree
+from tqdm import tqdm
 import glob
 from flask import (
     Blueprint, request, render_template, flash, g, redirect, url_for, Markup)
@@ -11,20 +14,22 @@ import xnat
 from app import db, app
 from .forms import ReportForm, RepairForm, CheckScanTypeForm
 from ..views import get_user
-from ..models import Project, ImgSession, Report, Scan, ScanType
+from ..models import (
+    Project, Subject, ImgSession, Report, Scan, ScanType, ContactInfo)
 from ..decorators import requires_login
 from ..utils import xnat_id_re
 from ..constants import (
     MRI, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
     DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
     INVALID_LABEL, CRITICAL, NONURGENT, FIX_OPTIONS,
-    FOUND_NO_CLINICAL, NOT_REQUIRED)
+    FOUND_NO_CLINICAL, NOT_REQUIRED, LOW)
 from flask_breadcrumbs import register_breadcrumb, default_breadcrumb_root
 
 
 mod = Blueprint('reporting', __name__, url_prefix='/reporting')
 default_breadcrumb_root(mod, '.reporting')
 
+daris_id_re = re.compile(r'1008\.2\.(\d+)\.(\d+)(?:\.1\.(\d+))?.*')
 FM = '{http://www.filemaker.com/fmpxmlresult}'
 
 
@@ -343,17 +348,213 @@ def confirm_scan_types():
 @mod.route('/sync-filemaker', methods=['GET'])
 def sync_filemaker():
     project_data = parse_fm_export_file('project.xml')
+    num_new_projects = 0
+    for row in tqdm(project_data, "Syncing project data"):
+        try:
+            project = Project.query.filter_by(
+                mbi_id=row['MBI Project Number']).one()
+        except orm.exc.NoResultFound:
+            db.session.add(Project(  # noqa pylint: disable=no-member
+                mbi_id=row['MBI Project Number'],
+                title=row['Running Title']))
+            num_new_projects += 1
+        else:
+            project.title = row['Running Title']
+    db.session.commit()  # pylint: disable=no-member
+    app.logger.info("Imported {} projects ({} new)".format(  # noqa pylint: disable=no-member
+        len(project_data), num_new_projects))
+    subject_data = parse_fm_export_file('subject.xml')
+    num_new_subjects = 0
+    for row in tqdm(subject_data, "Syncing subject data"):
+        dob = (datetime.strptime(
+            row['Date of Birth'].replace('.', '/').replace('/00', '/0'),
+            '%d/%m/%Y') if row['Date of Birth'] is not None else None)
+        try:
+            subject = Subject.query.filter_by(
+                mbi_id=row['MBI Subject ID']).one()
+        except orm.exc.NoResultFound:
+            db.session.add(Subject(  # noqa pylint: disable=no-member
+                mbi_id=row['MBI Subject ID'],
+                first_name=row['First Name'],
+                last_name=row['Last Name'],
+                middle_name=row['Middle Name'],
+                gender=row['Gender'],
+                dob=dob,
+                animal_id=row['Animal ID']))
+            num_new_subjects += 1
+        else:
+            subject.mbi_id = row['MBI Subject ID']
+            subject.first_name = row['First Name']
+            subject.last_name = row['Last Name']
+            subject.middle_name = row['Middle Name']
+            subject.gender = row['Gender']
+            subject.dob = dob
+            subject.animal_id = row['Animal ID']
+    db.session.commit()  # pylint: disable=no-member
+    app.logger.info("Imported {} subjects ({} new)".format(  # noqa pylint: disable=no-member
+        len(subject_data), num_new_subjects))
+    contact_info_data = parse_fm_export_file('contact.xml')
+    num_new_contact_infos = 0
+    for row in tqdm(contact_info_data, "Syncing contact info"):
+        date = (
+            datetime.strptime(
+                row['Subject_Details::Date'].replace('.', '/'), '%d/%m/%Y')
+            if row['Subject_Details::Date'] is not None else None)
+        try:
+            subject = Subject.query.filter_by(
+                mbi_id=row['Subjects::MBI Subject ID']).one()
+        except orm.exc.NoResultFound:
+            app.logger.info(  # pylint: disable=no-member
+                "Skipping row in ContactInfo with no subject ID: {}"
+                .format(row))
+            continue
+        try:
+            contact_info = ContactInfo.query.filter_by(date=date,
+                                                       subject_id=subject.id)
+        except orm.exc.NoResultFound:
+            db.session.add(ContactInfo(  # noqa pylint: disable=no-member
+                date=date,
+                subject=subject,
+                street=row['Subject_Details::Address Street'],
+                suburb=row['Subject_Details::Address Suburb'],
+                postcode=row['Subject_Details::Address Postcode'],
+                country=row['Subject_Details::Others'],
+                mobile_phone=row['Subject_Details::Mobile Phone'],
+                work_phone=row['Subject_Details::Work Phone']))
+            num_new_contact_infos += 1
+        else:
+            contact_info.street = row['Subject_Details::Address Street']
+            contact_info.suburb = row['Subject_Details::Address Suburb']
+            contact_info.postcode = row['Subject_Details::Address Postcode']
+            contact_info.country = row['Subject_Details::Others']
+            contact_info.mobile_phone = row['Subject_Details::Mobile Phone']
+            contact_info.work_phone = row['Subject_Details::Work Phone']
+    db.session.commit()  # pylint: disable=no-member
+    app.logger.info("Imported {} contact-info ({} new)".format(  # noqa pylint: disable=no-member
+        len(contact_info_data), num_new_contact_infos))
+    contact_info_data = parse_fm_export_file('contact.xml')
+    img_session_data = parse_fm_export_file('session.xml')
+    num_new_sessions = 0
+    for row in tqdm(img_session_data, "Syncing imaging sessions"):
+        try:
+            project = Project.query.filter_by(
+                mbi_id=row['MBI Project ID']).one()
+            subject = Subject.query.filter_by(
+                mbi_id=row['MBI Subject ID']).one()
+        except orm.exc.NoResultFound:
+            app.logger.info(  # pylint: disable=no-member
+                "Skipping row in ImgSession with no subject and/or project "
+                "ID: {}".format(row))
+            continue
+        scan_date = row['Date Scanned']
+        if scan_date is not None:
+            scan_date = datetime.strptime(
+                scan_date.replace('.', '/'), '%d/%m/%Y')
+        daris_code = row['DaRIS code']
+        data_status = PRESENT
+        if daris_code:
+            match = daris_id_re.match(daris_code)
+            if match is not None:
+                _, xnat_subject_id, xnat_visit_id = match.groups()
+                if xnat_visit_id is None:
+                    xnat_visit_id = '1'
+            else:
+                xnat_subject_id = xnat_visit_id = ''
+                if daris_code.startswith('1.5.'):
+                    data_status = UNIMELB_DARIS
+                else:
+                    data_status = INVALID_LABEL
+        else:
+            try:
+                xnat_subject_id = row['Study Specific Subject Number']
+            except (KeyError, AttributeError):
+                xnat_subject_id = None
+            try:
+                xnat_visit_id = row['Session ID']
+            except (KeyError, AttributeError):
+                xnat_visit_id = None
+            if None in (xnat_subject_id, xnat_visit_id):
+                data_status = INVALID_LABEL
+        if project.mbi_id.startswith('MMH'):
+            visit_prefix = 'MRPT'
+        else:
+            visit_prefix = 'MR'
+        # Get the visit part of the XNAT ID
+        try:
+            numeral, suffix = re.match(r'(\d+)(.*)', xnat_visit_id).groups()
+            xnat_visit_id = '{}{:02}{}'.format(
+                visit_prefix, int(numeral),
+                (suffix if suffix is not None else ''))
+        except (ValueError, TypeError, AttributeError):
+            data_status = INVALID_LABEL
+        height = row['Height']
+        if height is not None:
+            if height.endswith('cm'):
+                height = height[:-2]
+            if "'" in height:
+                feet, inches = height.split("'")[:2]
+                height = ((float(feet) * 12) + float(inches)) * 2.54
+            height = float(height)
+            if height < 3.0:
+                height *= 100.0  # Convert metres into centremetres
+        try:
+            img_session = ImgSession.query.filter_by(
+                id=row['STUDY ID']).one()
+        except orm.exc.NoResultFound:
+            img_session = ImgSession(  # noqa pylint: disable=no-member
+                id=row['STUDY ID'],
+                subject=subject,
+                project=project,
+                xnat_subject_id=xnat_subject_id,
+                xnat_visit_id=xnat_visit_id,
+                daris_code=daris_code,
+                scan_date=scan_date,
+                priority=LOW,
+                data_status=data_status,
+                height=height,
+                weight=row['Weight'],
+                notes=row['Radiographer Notes'])
+            db.session.add(img_session)  # pylint: disable=no-member
+            img_session.check_data_status()
+            num_new_sessions += 1
+        else:
+            recheck_status = (
+                xnat_subject_id != img_session.xnat_subject_id or
+                xnat_visit_id != img_session.xnat_visit_id)
+            img_session.subject = subject
+            img_session.project = project
+            img_session.id = row['STUDY ID']
+            img_session.subject = subject
+            img_session.project = project
+            img_session.xnat_subject_id = xnat_subject_id
+            img_session.xnat_visit_id = xnat_visit_id
+            img_session.daris_code = daris_code
+            img_session.scan_date = scan_date
+            img_session.priority = LOW
+            img_session.data_status = data_status
+            img_session.height = height
+            img_session.weight = row['Weight']
+            img_session.notes = row['Radiographer Notes']
+            if recheck_status:
+                img_session.check_data_status()
+    app.logger.info("Imported {} sessions ({} new)".format(  # noqa pylint: disable=no-member
+        len(img_session_data), num_new_sessions))
+    db.session.commit()  # pylint: disable=no-member
     return 200, {}
-
 
 
 def parse_fm_export_file(fname):
     with open(op.join(app.config['FILEMAKER_EXPORT_DIR'], fname)) as f:
         tree = etree.parse(f).getroot()
-    fields = tree.findall(FM + 'METADATA')[0].findall(FM + 'FIELD')
-    rows = tree.findall(FM + 'RESULTSET')[0].findall(FM + 'ROW')
-    data = {}
-    
+    fields = [e.attrib['NAME'] for e in tree.findall(
+        FM + 'METADATA')[0].findall(FM + 'FIELD')]
+    data = []
+    for row in tree.findall(FM + 'RESULTSET')[0].findall(FM + 'ROW'):
+        row_data = [e.find(FM + 'DATA') for e in row.findall(FM + 'COL')]
+        row_data = [(d.text.strip() if (d is not None and d.text is not None)
+                     else None) for d in row_data]
+        data.append(dict(zip(fields, row_data)))
+    return data
 
 
 @mod.route('/sync-alfred', methods=['GET'])
