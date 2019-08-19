@@ -18,6 +18,7 @@ from ..models import (
     Project, Subject, ImgSession, Report, Scan, ScanType, ContactInfo)
 from ..decorators import requires_login
 from ..utils import xnat_id_re
+from ..database import empty_sessions
 from ..constants import (
     MRI, PATHOLOGIES, REPORTER_ROLE, ADMIN_ROLE,
     DATA_STATUS, FIX_XNAT, PRESENT, NOT_FOUND, UNIMELB_DARIS,
@@ -220,7 +221,7 @@ def repair():
                 project_id, xnat_subj_id, xnat_visit_id = xnat_id_re.match(
                     form.xnat_id.data).groups()
                 try:
-                    project = Project.query.filter_by(mbi_id=project_id).one()
+                    project = Project.query.filter_by(id=project_id).one()
                 except orm.exc.NoResultFound:
                     with xnat.connect(
                         server=app.config['SOURCE_XNAT_URL'],
@@ -352,10 +353,10 @@ def sync_filemaker():
     for row in tqdm(project_data, "Syncing project data"):
         try:
             project = Project.query.filter_by(
-                mbi_id=row['MBI Project Number']).one()
+                id=row['MBI Project Number']).one()
         except orm.exc.NoResultFound:
             db.session.add(Project(  # noqa pylint: disable=no-member
-                mbi_id=row['MBI Project Number'],
+                id=row['MBI Project Number'],
                 title=row['Running Title']))
             num_new_projects += 1
         else:
@@ -371,10 +372,10 @@ def sync_filemaker():
             '%d/%m/%Y') if row['Date of Birth'] is not None else None)
         try:
             subject = Subject.query.filter_by(
-                mbi_id=row['MBI Subject ID']).one()
+                id=row['MBI Subject ID']).one()
         except orm.exc.NoResultFound:
             db.session.add(Subject(  # noqa pylint: disable=no-member
-                mbi_id=row['MBI Subject ID'],
+                id=row['MBI Subject ID'],
                 first_name=row['First Name'],
                 last_name=row['Last Name'],
                 middle_name=row['Middle Name'],
@@ -383,7 +384,7 @@ def sync_filemaker():
                 animal_id=row['Animal ID']))
             num_new_subjects += 1
         else:
-            subject.mbi_id = row['MBI Subject ID']
+            subject.id = row['MBI Subject ID']
             subject.first_name = row['First Name']
             subject.last_name = row['Last Name']
             subject.middle_name = row['Middle Name']
@@ -405,7 +406,7 @@ def sync_filemaker():
             if row['Subject_Details::Date'] is not None else None)
         try:
             subject = Subject.query.filter_by(
-                mbi_id=row['Subjects::MBI Subject ID']).one()
+                id=row['Subjects::MBI Subject ID']).one()
         except orm.exc.NoResultFound:
             skipped_infos.append(row)
             continue
@@ -438,11 +439,13 @@ def sync_filemaker():
     num_new_sessions = 0
     skipped_sessions = []
     for row in tqdm(img_session_data, "Syncing imaging sessions"):
+        if int(row['STUDY ID']) in empty_sessions:
+            continue  # skip this study as it was never filled out
         try:
             project = Project.query.filter_by(
-                mbi_id=row['MBI Project ID']).one()
+                id=row['MBI Project ID']).one()
             subject = Subject.query.filter_by(
-                mbi_id=row['MBI Subject ID']).one()
+                id=row['MBI Subject ID']).one()
         except orm.exc.NoResultFound:
             skipped_sessions.append(row)
             continue
@@ -480,7 +483,7 @@ def sync_filemaker():
                 xnat_visit_id = None
             if None in (xnat_subject_id, xnat_visit_id):
                 data_status = INVALID_LABEL
-        if project.mbi_id.startswith('MMH'):
+        if project.id.startswith('MMH'):
             visit_prefix = 'MRPT'
         else:
             visit_prefix = 'MR'
@@ -606,10 +609,10 @@ def sync_alfred():
                 mbi_session = mbi_xnat.experiments[img_session.xnat_id]  # noqa pylint: disable=no-member
                 try:
                     alf_subject = alf_project.subjects[
-                        img_session.subject.mbi_id]
+                        img_session.subject.id]
                 except KeyError:
                     alf_subject = alf_xnat.classes.SubjectData(  # noqa pylint: disable=no-member
-                        label=img_session.subject.mbi_id, parent=alf_project)
+                        label=img_session.subject.id, parent=alf_project)
                 alf_session = alf_xnat.classes.MrSessionData(  # noqa pylint: disable=no-member
                     label=img_session.id, parent=alf_subject)
                 prev_exported = list(alf_session.scans.keys())

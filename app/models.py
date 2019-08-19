@@ -104,15 +104,14 @@ class Project(db.Model):
 
     __tablename__ = 'project'
 
-    id = db.Column(db.Integer, primary_key=True)  # noqa pylint: disable=no-member
-    mbi_id = db.Column(db.String(10), unique=True)  # noqa pylint: disable=no-member
+    id = db.Column(db.String(20), primary_key=True)  # noqa pylint: disable=no-member
     title = db.Column(db.String(50))  # pylint: disable=no-member
 
     # Relationships
     sessions = db.relationship('ImgSession', back_populates='project')  # noqa pylint: disable=no-member
 
-    def __init__(self, mbi_id, title):
-        self.mbi_id = mbi_id
+    def __init__(self, id, title):
+        self.id = id
         self.title = title
 
 
@@ -126,8 +125,7 @@ class Subject(db.Model):
     __tablename__ = 'subject'
 
     # Fields
-    id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    mbi_id = db.Column(db.String(20), unique=True)  # noqa pylint: disable=no-member
+    id = db.Column(db.String(20), primary_key=True)  # noqa pylint: disable=no-member
     first_name = db.Column(db.String(100))  # pylint: disable=no-member
     last_name = db.Column(db.String(100))  # pylint: disable=no-member
     middle_name = db.Column(db.String(100))  # pylint: disable=no-member
@@ -139,9 +137,9 @@ class Subject(db.Model):
     sessions = db.relationship('ImgSession', back_populates='subject')  # noqa pylint: disable=no-member
     contact_infos = db.relationship('ContactInfo', back_populates='subject')  # noqa pylint: disable=no-member
 
-    def __init__(self, mbi_id, first_name, last_name, gender, dob,
+    def __init__(self, id, first_name, last_name, gender, dob,
                  middle_name=None, animal_id=None):
-        self.mbi_id = mbi_id
+        self.id = id
         self.first_name = first_name
         self.last_name = last_name
         self.gender = gender
@@ -150,7 +148,7 @@ class Subject(db.Model):
         self.animal_id = animal_id
 
     def __repr__(self):
-        return '<Subject {}>'.format(self.mbi_id)
+        return '<Subject {}>'.format(self.id)
 
 
 class ContactInfo(db.Model):
@@ -183,7 +181,7 @@ class ContactInfo(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
+    subject_id = db.Column(db.String(20), db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
     date = db.Column(db.Date())  # pylint: disable=no-member
     street = db.Column(db.String(100))  # pylint: disable=no-member
     suburb = db.Column(db.String(100))  # pylint: disable=no-member
@@ -208,7 +206,7 @@ class ContactInfo(db.Model):
 
     def __repr__(self):
         return '<ContactInfo {} - {}>'.format(
-            self.subject.mbi_id, self.date.strftime('%d/%m/%Y'))
+            self.subject.id, self.date.strftime('%d/%m/%Y'))
 
 
 class ImgSession(db.Model):
@@ -220,8 +218,8 @@ class ImgSession(db.Model):
 
     # Fields
     id = db.Column(db.Integer, primary_key=True)  # pylint: disable=no-member
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))  # noqa pylint: disable=no-member
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
+    project_id = db.Column(db.String(20), db.ForeignKey('project.id'))  # noqa pylint: disable=no-member
+    subject_id = db.Column(db.String(20), db.ForeignKey('subject.id'))  # noqa pylint: disable=no-member
     xnat_subject_id = db.Column(db.String(100))  # noqa pylint: disable=no-member
     xnat_visit_id = db.Column(db.String(100))  # noqa pylint: disable=no-member
     daris_code = db.Column(db.String(50))  # pylint: disable=no-member
@@ -271,10 +269,10 @@ class ImgSession(db.Model):
 
     @property
     def xnat_id(self):
-        if None in (self.project.mbi_id, self.xnat_subject_id,
+        if None in (self.project.id, self.xnat_subject_id,
                     self.xnat_visit_id):
             return None
-        return '{}_{}_{}'.format(self.project.mbi_id, self.xnat_subject_id,
+        return '{}_{}_{}'.format(self.project.id, self.xnat_subject_id,
                                  self.xnat_visit_id)
 
     @classmethod

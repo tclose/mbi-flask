@@ -74,19 +74,19 @@ def init(password=None):
         subjects = []
         projects = {}
 
-        for mbi_id, title in (('MRH060', 'A project'),
+        for id, title in (('MRH060', 'A project'),
                               ('MRH017', 'Another project'),
                               ('MRH000', 'Yet another project'),
                               ('MRH007', 'Yet another project again'),
                               ('SHOULDNOTBESHOWN',
                                'Project with scans that should not be shown')):
-            project = Project(mbi_id, title)
-            projects[project.mbi_id] = project
+            project = Project(id, title)
+            projects[project.id] = project
             db.session.add(project)  # pylint: disable=no-member
 
         db.session.commit()  # pylint: disable=no-member
 
-        for mbi_id, dob, first_name, last_name, gender in [
+        for id, dob, first_name, last_name, gender in [
             ('MSH103138', '12/03/1952', 'Bob', 'Brown', MALE),
             ('MSH223132', '05/12/1951', 'Sami', 'Shah', MALE),
             ('MSH892342', '24/08/1980', 'Lindsay', 'Lohan', FEMALE),
@@ -97,7 +97,7 @@ def init(password=None):
             ('MSH097335', '12/03/1972', 'Charlie', 'Chaplin', MALE),
             ('MSH097336', '12/03/1972', 'Emilio', 'Estevez', MALE),
                 ('MSH054613', '11/02/1983', 'Lucy', 'Liu', FEMALE)]:
-            subj = Subject(mbi_id, first_name, last_name, gender,
+            subj = Subject(id, first_name, last_name, gender,
                            datetime.strptime(dob, '%d/%m/%Y'))  # noqa pylint: disable=no-member
             subjects.append(subj)
             db.session.add(subj)  # pylint: disable=no-member
@@ -236,9 +236,12 @@ def import_old_reports(export_file):
     for row in tqdm(rows[1:]):
         if not row:
             continue
+        session_id = d['STUDY ID']
+        if Report.query.filter_by(session_id=session_id).count():
+            continue
         d = {k: p.strip() for k, p in zip(keys, row.split('\t'))}
         try:
-            img_session = ImgSession.query.filter_by(id=d['StudyID']).one()
+            img_session = ImgSession.query.filter_by(id=session_id).one()
         except NoResultFound:
             print("Did not find session {}".format(d['StudyID']))
         # Add dummy reports if existing report was stored in FM
@@ -289,7 +292,7 @@ def import_old_reports(export_file):
 #                         continue
 #                 try:
 #                     project = Project.query.filter_by(
-#                         mbi_id=mbi_project_id).one()
+#                         id=mbi_project_id).one()
 #                 except orm.exc.NoResultFound:
 #                     project = Project(mbi_project_id)
 #                     db.session.add(project)  # pylint: disable=no-member
@@ -315,7 +318,7 @@ def import_old_reports(export_file):
 #                 # otherwise add them
 #                 try:
 #                     subject = Subject.query.filter_by(
-#                         mbi_id=mbi_subject_id).one()
+#                         id=mbi_subject_id).one()
 #                 except orm.exc.NoResultFound:
 #                     subject = Subject(mbi_subject_id,
 #                                       first_name, last_name, dob)
@@ -437,6 +440,11 @@ def import_old_reports(export_file):
 #                 else:
 #                     previous.append(study_id)
 
+
+empty_sessions = [
+    385, 7041, 6154, 5132, 5133, 5134, 5135, 2580, 6679, 804, 3878, 1191, 3381,
+    3390, 3392, 577, 453, 454, 456, 1866, 3920, 6868, 6239, 6374, 6375, 6376,
+    6377, 6378, 6379, 6380, 6381, 6257, 755, 756, 759, 377, 378, 4735]
 
 if __name__ == '__main__':
     ACTIONS = ['init', 'import']
