@@ -12,3 +12,5 @@ __pycache__
 /overwritten
 *.old
 /fm-export
+/to-import
+/to_import
