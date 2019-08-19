@@ -31,28 +31,28 @@
         </tr>
     </thead>
     <tbody>
-{% for session in sessions %}
-    <tr onclick="{{ 'select_session({});'.format(session.id) }}">
+{% for img_session in sessions %}
+    <tr onclick="{{ 'select_session({});'.format(img_session.id) }}">
         <td class="sessions-id">
-            {{ session.id }}
+            {{ img_session.id }}
         </td>
         <td class="sessions-subject }}">
-            {{ session.subject.mbi_id }}
+            {{ img_session.subject.mbi_id }}
         </td>
         <td class="sessions-scandate">
-            {{ session.scan_date.strftime('%d/%m/%Y') }}
+            {{ img_session.scan_date.strftime('%d/%m/%Y') }}
         </td>
         <td class="sessions-xnatid">
-            {{ session.xnat_id }}
+            {{ img_session.xnat_id }}
         </td>
         {% if include_status %}
         <td class="sessions-status }}">
-            {{ DATA_STATUS[session.data_status][0] }}
+            {{ DATA_STATUS[img_session.data_status][0] }}
         </td>
         {% endif %}
         {% if include_priority %}
-        <td class="sessions-priority-{{ session.priority_str.lower() }}">
-            {{ session.priority_str }}
+        <td class="sessions-priority-{{ img_session.priority_str.lower() }}">
+            {{ img_session.priority_str }}
         </td>
         {% endif %}
     </div>

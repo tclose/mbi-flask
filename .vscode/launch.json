@@ -34,7 +34,14 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/test/test_fm_sync.py",
-            "console": "internalConsole"
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: FM report import",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_import_old_reports.py",
+            "console": "integratedTerminal"
         },
         {
             "name": "Python: Export",

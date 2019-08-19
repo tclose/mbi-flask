@@ -361,7 +361,7 @@ def sync_filemaker():
         else:
             project.title = row['Running Title']
     db.session.commit()  # pylint: disable=no-member
-    app.logger.info("Imported {} projects ({} new)".format(  # noqa pylint: disable=no-member
+    app.logger.info("Sync'd {} projects ({} new)".format(  # noqa pylint: disable=no-member
         len(project_data), num_new_projects))
     subject_data = parse_fm_export_file('subject.xml')
     num_new_subjects = 0
@@ -391,11 +391,14 @@ def sync_filemaker():
             subject.dob = dob
             subject.animal_id = row['Animal ID']
     db.session.commit()  # pylint: disable=no-member
-    app.logger.info("Imported {} subjects ({} new)".format(  # noqa pylint: disable=no-member
+    app.logger.info("Sync'd {} subjects ({} new)".format(  # noqa pylint: disable=no-member
         len(subject_data), num_new_subjects))
     contact_info_data = parse_fm_export_file('contact.xml')
     num_new_contact_infos = 0
+    skipped_infos = []
     for row in tqdm(contact_info_data, "Syncing contact info"):
+        if all(v is None for v in row.values()):
+            continue  # Skipping empty row
         date = (
             datetime.strptime(
                 row['Subject_Details::Date'].replace('.', '/'), '%d/%m/%Y')
@@ -404,9 +407,7 @@ def sync_filemaker():
             subject = Subject.query.filter_by(
                 mbi_id=row['Subjects::MBI Subject ID']).one()
         except orm.exc.NoResultFound:
-            app.logger.info(  # pylint: disable=no-member
-                "Skipping row in ContactInfo with no subject ID: {}"
-                .format(row))
+            skipped_infos.append(row)
             continue
         try:
             contact_info = ContactInfo.query.filter_by(date=date,
@@ -430,11 +431,12 @@ def sync_filemaker():
             contact_info.mobile_phone = row['Subject_Details::Mobile Phone']
             contact_info.work_phone = row['Subject_Details::Work Phone']
     db.session.commit()  # pylint: disable=no-member
-    app.logger.info("Imported {} contact-info ({} new)".format(  # noqa pylint: disable=no-member
+    app.logger.info("Sync'd {} contact-info ({} new)".format(  # noqa pylint: disable=no-member
         len(contact_info_data), num_new_contact_infos))
     contact_info_data = parse_fm_export_file('contact.xml')
     img_session_data = parse_fm_export_file('session.xml')
     num_new_sessions = 0
+    skipped_sessions = []
     for row in tqdm(img_session_data, "Syncing imaging sessions"):
         try:
             project = Project.query.filter_by(
@@ -442,15 +444,18 @@ def sync_filemaker():
             subject = Subject.query.filter_by(
                 mbi_id=row['MBI Subject ID']).one()
         except orm.exc.NoResultFound:
-            app.logger.info(  # pylint: disable=no-member
-                "Skipping row in ImgSession with no subject and/or project "
-                "ID: {}".format(row))
+            skipped_sessions.append(row)
             continue
         scan_date = row['Date Scanned']
-        if scan_date is not None:
-            scan_date = datetime.strptime(
-                scan_date.replace('.', '/'), '%d/%m/%Y')
+        if scan_date is None:
+            skipped_sessions.append(row)
+            continue
+        scan_date = datetime.strptime(
+            scan_date.replace('.', '/'), '%d/%m/%Y')
         daris_code = row['DaRIS code']
+        if daris_code == 'xxx':
+            skipped_sessions.append(row)
+            continue
         data_status = PRESENT
         if daris_code:
             match = daris_id_re.match(daris_code)
@@ -494,9 +499,23 @@ def sync_filemaker():
             if "'" in height:
                 feet, inches = height.split("'")[:2]
                 height = ((float(feet) * 12) + float(inches)) * 2.54
-            height = float(height)
-            if height < 3.0:
-                height *= 100.0  # Convert metres into centremetres
+            try:
+                height = float(height)
+            except ValueError:
+                app.logger.warning("Could not parse height '{}' of {}"  # noqa pylint: disable=no-member
+                                   .format(height, row))
+                height = None
+            else:
+                if height < 3.0:
+                    height *= 100.0  # Convert metres into centremetres
+        weight = row['Weight']
+        if weight is not None:
+            try:
+                weight = float(weight)
+            except ValueError:
+                app.logger.warning("Could not parse weight '{}' of {}"  # noqa pylint: disable=no-member
+                        .format(weight, row))
+                weight = None
         try:
             img_session = ImgSession.query.filter_by(
                 id=row['STUDY ID']).one()
@@ -512,7 +531,7 @@ def sync_filemaker():
                 priority=LOW,
                 data_status=data_status,
                 height=height,
-                weight=row['Weight'],
+                weight=weight,
                 notes=row['Radiographer Notes'])
             db.session.add(img_session)  # pylint: disable=no-member
             img_session.check_data_status()
@@ -533,14 +552,24 @@ def sync_filemaker():
             img_session.priority = LOW
             img_session.data_status = data_status
             img_session.height = height
-            img_session.weight = row['Weight']
+            img_session.weight = weight
             img_session.notes = row['Radiographer Notes']
             if recheck_status:
                 img_session.check_data_status()
-    app.logger.info("Imported {} sessions ({} new)".format(  # noqa pylint: disable=no-member
+    app.logger.info("Sync'd {} sessions ({} new)".format(  # noqa pylint: disable=no-member
         len(img_session_data), num_new_sessions))
     db.session.commit()  # pylint: disable=no-member
-    return 200, {}
+    return 200, {
+        'new_projects': num_new_projects,
+        'all_projects': len(project_data),
+        'new_subjects': num_new_subjects,
+        'all_subjects': len(subject_data),
+        'new_contacts': num_new_contact_infos,
+        'all_contacts': len(contact_info_data),
+        'new_sessions': num_new_sessions,
+        'all_sessions': len(img_session_data),
+        'skipped_contacts': skipped_infos,
+        'skipped_sessions': skipped_sessions}
 
 
 def parse_fm_export_file(fname):
